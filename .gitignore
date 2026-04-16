@@ -1,0 +1,19 @@
+# Bicep build output
+*.json
+
+# VS Code
+.vscode/
+
+# Python (future tools)
+__pycache__/
+*.pyc
+
+# Node (if you add JS tools later)
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
