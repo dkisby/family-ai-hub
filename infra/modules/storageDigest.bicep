@@ -13,13 +13,20 @@ resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     minimumTlsVersion: 'TLS1_2'
     publicNetworkAccess: 'Enabled'
     supportsHttpsTrafficOnly: true
+  }
+}
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
+  parent: stg
+  name: 'default'
+  properties: any({
     staticWebsite: {
       enabled: true
       indexDocument: 'index.html'
       error404Document: '404.html'
     }
-  }
+  })
 }
 
-output webUrl string = 'https://${stg.name}.z13.web.core.windows.net'
+output webUrl string = stg.properties.primaryEndpoints.web
 output storageName string = stg.name
