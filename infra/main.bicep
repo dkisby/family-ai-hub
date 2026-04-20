@@ -1,5 +1,6 @@
 param location string = resourceGroup().location
-param tenantId string
+
+var tenantId = tenant().tenantId
 
 module logAnalytics './modules/logAnalytics.bicep' = {
   name: 'logAnalytics'
