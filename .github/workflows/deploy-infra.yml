@@ -22,6 +22,13 @@ jobs:
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+    - name: Debug parameters file
+      run: |
+        echo "=== hex dump of first bytes ==="
+        xxd infra/parameters/main.parameters.json | head -5
+        echo "=== cat output ==="
+        cat infra/parameters/main.parameters.json
+            
     - name: Deploy Bicep to Azure
       run: |
         az deployment group create \
