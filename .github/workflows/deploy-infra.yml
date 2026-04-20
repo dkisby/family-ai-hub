@@ -28,6 +28,4 @@ jobs:
         scope: resourcegroup
         resourceGroupName: ${{ secrets.AZURE_RG }}
         template: infra/main.bicep
-        parameters: >
-          infra/parameters/main.parameters.json
-          tenantId=${{ secrets.AZURE_TENANT_ID }}
+        parameters: infra/parameters/main.parameters.json tenantId=${{ secrets.AZURE_TENANT_ID }}
