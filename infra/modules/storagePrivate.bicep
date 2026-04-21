@@ -9,12 +9,17 @@ resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
   kind: 'StorageV2'
   properties: {
-    allowBlobPublicAccess: false
+    allowBlobPublicAccess: true
     minimumTlsVersion: 'TLS1_2'
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
     supportsHttpsTrafficOnly: true
   }
 }
 
-output storageId string = stg.id
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
+  parent: stg
+  name: 'default'
+}
+
+output webUrl string = stg.properties.primaryEndpoints.web
 output storageName string = stg.name
