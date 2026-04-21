@@ -7,6 +7,7 @@ resource kv 'Microsoft.KeyVault/vaults@2023-02-01' = {
   location: location
   properties: {
     tenantId: tenantId
+    enabledForTemplateDeployment: true
     enablePurgeProtection: true
     enableSoftDelete: true
     accessPolicies: []
