@@ -31,6 +31,9 @@ resource laSharedKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   properties: {
     value: listKeys(resourceId('Microsoft.OperationalInsights/workspaces', logAnalyticsName), '2023-09-01').primarySharedKey
   }
+  dependsOn: [
+    keyVault
+  ]
 }
 
 module storagePrivate './modules/storagePrivate.bicep' = {
