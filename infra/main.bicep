@@ -1,11 +1,13 @@
 param location string = resourceGroup().location
 
 var tenantId = tenant().tenantId
+var acaEnvName = 'aca-env-family-hub'
+var logAnalyticsName = 'log-family-hub'
 
 module logAnalytics './modules/logAnalytics.bicep' = {
   name: 'logAnalytics'
   params: {
-    name: 'log-family-hub'
+    name: logAnalyticsName
     location: location
   }
 }
@@ -16,6 +18,18 @@ module keyVault './modules/keyVault.bicep' = {
     name: 'kv-family-hub'
     location: location
     tenantId: tenantId
+  }
+}
+
+resource keyVaultRef 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  name: 'kv-family-hub'
+}
+
+resource laSharedKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVaultRef
+  name: 'la-shared-key'
+  properties: {
+    value: listKeys(resourceId('Microsoft.OperationalInsights/workspaces', logAnalyticsName), '2023-09-01').primarySharedKey
   }
 }
 
@@ -43,11 +57,12 @@ module acr './modules/acr.bicep' = {
   }
 }
 
-module acaEnv './modules/acaEnvironment.bicep' = {
+module acaEnv 'modules/acaEnvironment.bicep' = {
   name: 'acaEnv'
   params: {
-    name: 'aca-family-hub'
+    name: acaEnvName
     location: location
-    logAnalyticsId: logAnalytics.outputs.workspaceId
+    logAnalyticsCustomerId: logAnalytics.outputs.customerId
+    logAnalyticsSharedKey: keyVaultRef.getSecret('la-shared-key')
   }
 }
