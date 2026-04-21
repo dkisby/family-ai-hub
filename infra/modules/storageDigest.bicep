@@ -19,13 +19,31 @@ resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
   parent: stg
   name: 'default'
-  properties: any({
-    staticWebsite: {
-      enabled: true
-      indexDocument: 'index.html'
-      error404Document: '404.html'
-    }
-  })
+}
+
+resource enableStaticWebsite 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'enableStaticWebsite-${name}'
+  location: location
+  kind: 'AzureCLI'
+  properties: {
+    azCliVersion: '2.50.0'
+    retentionInterval: 'PT1H'
+    scriptContent: '''
+      az storage blob service-properties update \
+        --account-name ${STORAGE_NAME} \
+        --static-website true \
+        --index-document index.html \
+        --404-document 404.html \
+        --auth-mode login
+    '''
+    environmentVariables: [
+      {
+        name: 'STORAGE_NAME'
+        value: name
+      }
+    ]
+  }
+  dependsOn: [stg]
 }
 
 output webUrl string = stg.properties.primaryEndpoints.web
