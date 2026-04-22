@@ -8,6 +8,8 @@ param logAnalyticsSharedKey string
 resource env 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: name
   location: location
+  identity: {
+    type: 'SystemAssigned'
   properties: {
     appLogsConfiguration: {
       destination: 'log-analytics'
