@@ -28,10 +28,15 @@ jobs:
         xxd infra/parameters/main.parameters.json | head -5
         echo "=== cat output ==="
         cat infra/parameters/main.parameters.json
-            
+
     - name: Deploy Bicep to Azure
       run: |
         az deployment group create \
           --resource-group ${{ secrets.AZURE_RG }} \
           --template-file infra/main.bicep \
           --parameters infra/parameters/main.parameters.json
+
+    - name: Run smoke test
+      run: |
+          chmod +x scripts/smoke-test.sh
+          bash scripts/smoke-test.sh ${{ secrets.AZURE_RG }}
