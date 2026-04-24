@@ -79,43 +79,25 @@ ACA_IDENTITY=$(az containerapp env show -g "$RG" -n "$ACA_ENV" --query "identity
 # 6. Diagnostic settings
 echo "6️⃣  Checking diagnostic settings..."
 
-ACR_NAME="acrfamilyhub"
-ACR_ID=$(az acr show -n "$ACR_NAME" -g "$RG" --query id -o tsv)
-
-# Special-case ACR
-ACR_DIAG_COUNT=$(az monitor diagnostic-settings list \
-  --resource "$ACR_ID" \
-  --query "length(@)" -o tsv)
-
-if [[ "$ACR_DIAG_COUNT" -gt 0 ]]; then
-  pass "Diagnostics enabled for $ACR_NAME"
-else
-  fail "Diagnostics missing for $ACR_NAME"
-fi
+SKIP_DIAGNOSTICS=(
+  "log-family-hub"      # Is the diagnostics destination, not a source
+  "stgfamilyhubcore"    # Storage accounts don't support diagnostic categories cleanly
+  "stgfamilyhubdigest"  # Storage accounts don't support diagnostic categories cleanly
+)
 
 for ID in $(az resource list -g "$RG" --query "[].id" -o tsv); do
   BASENAME=$(basename "$ID")
 
-  # Skip ACR (already checked)
-  if [[ "$BASENAME" == "$ACR_NAME" ]]; then
+  if [[ " ${SKIP_DIAGNOSTICS[*]} " == *" $BASENAME "* ]]; then
+    pass "Skipping diagnostics check for $BASENAME"
     continue
   fi
 
-  # Skip Log Analytics
-  if [[ "$BASENAME" == "log-family-hub" ]]; then
-    pass "Skipping diagnostics check for Log Analytics Workspace ($BASENAME)"
-    continue
-  fi
+  DIAG_COUNT=$(az monitor diagnostic-settings list \
+    --resource "$ID" \
+    --query "length(@)" -o tsv)
 
-  # Skip storage accounts (Azure keeps rejecting categories)
-  if [[ "$BASENAME" == "stgfamilyhubcore" || "$BASENAME" == "stgfamilyhubdigest" ]]; then
-    pass "Skipping diagnostics check for Storage Account ($BASENAME)"
-    continue
-  fi
-
-  DIAG=$(az monitor diagnostic-settings list --resource "$ID" --query "value" -o tsv)
-
-  if [[ -n "$DIAG" ]]; then
+  if [[ "$DIAG_COUNT" -gt 0 ]]; then
     pass "Diagnostics enabled for $BASENAME"
   else
     fail "Diagnostics missing for $BASENAME"
