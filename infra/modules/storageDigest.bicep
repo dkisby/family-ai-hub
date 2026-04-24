@@ -45,6 +45,12 @@ resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2022-09-01'
 resource digestDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'digestDiagnostics'
   scope: stgDigest
+  dependsOn: [
+    blobService
+    queueService
+    tableService
+    fileService
+  ]
   properties: {
     workspaceId: logAnalyticsWorkspaceId
     logs: [
