@@ -18,6 +18,7 @@ module keyVault './modules/keyVault.bicep' = {
     name: 'kv-family-hub'
     location: location
     tenantId: tenantId
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
   }
 }
 
