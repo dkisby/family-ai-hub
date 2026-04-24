@@ -34,7 +34,8 @@ jobs:
         az deployment group create \
           --resource-group ${{ secrets.AZURE_RG }} \
           --template-file infra/main.bicep \
-          --parameters infra/parameters/main.parameters.json
+          --parameters infra/parameters/main.parameters.json \
+          --parameters webuiAadClientId=${{ secrets.WEBUI_AAD_CLIENT_ID }}
 
     - name: Run smoke test
       run: |

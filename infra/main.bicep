@@ -1,5 +1,8 @@
 param location string = resourceGroup().location
 
+@description('Entra app client ID for WebUI')
+param webuiAadClientId string
+
 var tenantId = tenant().tenantId
 var acaEnvName = 'aca-env-family-hub'
 var logAnalyticsName = 'log-family-hub'
@@ -70,5 +73,23 @@ module acaEnv 'modules/acaEnvironment.bicep' = {
     logAnalyticsCustomerId: logAnalytics.outputs.customerId
     logAnalyticsSharedKey: keyVaultRef.getSecret('la-shared-key')
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+  }
+}
+
+module acaWebUI './modules/acaWebUI.bicep' = {
+  name: 'acaWebUI'
+  params: {
+    name: 'webui-family-hub'
+    location: location
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    acaEnvironmentName: acaEnvName
+    acrName: 'acrfamilyhub'
+    image: 'openwebui:latest'
+    aadClientId: webuiAadClientId
+    tenantId: tenantId
+    cpu: '0.5'
+    memory: '1Gi'
+    minReplicas: 0
+    maxReplicas: 1
   }
 }

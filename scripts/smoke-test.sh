@@ -104,5 +104,36 @@ for ID in $(az resource list -g "$RG" --query "[].id" -o tsv); do
   fi
 done
 
+# 7. Container Apps
+echo "7️⃣  Checking Container Apps..."
+
+check_resource "Microsoft.App/containerApps" "WebUI Container App"
+
+WEBUI_NAME=$(az containerapp list -g "$RG" --query "[0].name" -o tsv)
+
+# Identity
+WEBUI_IDENTITY=$(az containerapp show -g "$RG" -n "$WEBUI_NAME" --query "identity.type" -o tsv)
+[[ "$WEBUI_IDENTITY" == "SystemAssigned" ]] && pass "WebUI identity enabled" || fail "WebUI identity missing"
+
+# External ingress enabled
+WEBUI_INGRESS=$(az containerapp show -g "$RG" -n "$WEBUI_NAME" --query "properties.configuration.ingress.external" -o tsv)
+[[ "$WEBUI_INGRESS" == "true" ]] && pass "WebUI ingress is external" || fail "WebUI ingress is not external"
+
+# Auth enabled
+WEBUI_AUTH=$(az containerapp auth show -g "$RG" -n "$WEBUI_NAME" --query "properties.platform.enabled" -o tsv 2>/dev/null || echo "false")
+[[ "$WEBUI_AUTH" == "true" ]] && pass "WebUI auth enabled" || fail "WebUI auth not enabled"
+
+# ACR pull via managed identity
+WEBUI_REGISTRY=$(az containerapp show -g "$RG" -n "$WEBUI_NAME" \
+  --query "properties.configuration.registries[0].identity" -o tsv)
+[[ "$WEBUI_REGISTRY" == "system" ]] && pass "WebUI pulling from ACR via managed identity" || fail "WebUI not using managed identity for ACR"
+
+# ACR role assignment - WebUI identity has AcrPull
+WEBUI_PRINCIPAL=$(az containerapp show -g "$RG" -n "$WEBUI_NAME" --query "identity.principalId" -o tsv)
+ACR_ID=$(az acr show -n "$ACR_NAME" -g "$RG" --query "id" -o tsv)
+ACR_PULL_ROLE=$(az role assignment list --assignee "$WEBUI_PRINCIPAL" --scope "$ACR_ID" \
+  --query "[?roleDefinitionName=='AcrPull'].roleDefinitionName" -o tsv)
+[[ "$ACR_PULL_ROLE" == "AcrPull" ]] && pass "WebUI has AcrPull role on ACR" || fail "WebUI missing AcrPull role on ACR"
+
 echo "---------------------------------------------"
 echo "🎉 ALL CHECKS PASSED — Infrastructure is healthy"
