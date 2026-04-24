@@ -41,7 +41,6 @@ module storagePrivate './modules/storagePrivate.bicep' = {
   params: {
     name: 'stgfamilyhubcore'
     location: location
-    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
   }
 }
 
@@ -50,7 +49,6 @@ module storageDigest './modules/storageDigest.bicep' = {
   params: {
     name: 'stgfamilyhubdigest'
     location: location
-    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
   }
 }
 
