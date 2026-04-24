@@ -54,19 +54,19 @@ resource digestDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
   properties: {
     workspaceId: logAnalyticsWorkspaceId
     logs: [
-      {
-        category: 'StorageRead'
-        enabled: true
-      }
-      {
-        category: 'StorageWrite'
-        enabled: true
-      }
-      {
-        category: 'StorageDelete'
-        enabled: true
-      }
-    ]
+  {
+    category: 'StorageBlobRead'
+    enabled: true
+  }
+  {
+    category: 'StorageBlobWrite'
+    enabled: true
+  }
+  {
+    category: 'StorageBlobDelete'
+    enabled: true
+  }
+]
     metrics: [
       {
         category: 'Transaction'
