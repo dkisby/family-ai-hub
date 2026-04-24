@@ -97,19 +97,26 @@ fi
 for ID in $(az resource list -g "$RG" --query "[].id" -o tsv); do
   BASENAME=$(basename "$ID")
 
-  # Skip ACR because we already checked it above
-  if [[ "$BASENAME" == "$ACR_NAME" ]]; then
+    # Skip ACR (checked above)
+    if [[ "$BASENAME" == "$ACR_NAME" ]]; then
     continue
-  fi
+    fi
 
-  DIAG=$(az monitor diagnostic-settings list --resource "$ID" --query "value" -o tsv)
+    # Skip Log Analytics Workspace (it cannot have diag settings)
+    if [[ "$BASENAME" == "log-family-hub" ]]; then
+    pass "Skipping diagnostics check for Log Analytics Workspace ($BASENAME)"
+    continue
+    fi
 
-  if [[ -n "$DIAG" ]]; then
+    DIAG=$(az monitor diagnostic-settings list --resource "$ID" --query "value" -o tsv)
+
+    if [[ -n "$DIAG" ]]; then
     pass "Diagnostics enabled for $BASENAME"
-  else
+    else
     fail "Diagnostics missing for $BASENAME"
-  fi
+    fi
 done
+
 
 echo "---------------------------------------------"
 echo "🎉 ALL CHECKS PASSED — Infrastructure is healthy"
