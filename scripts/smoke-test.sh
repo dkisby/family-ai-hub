@@ -49,8 +49,12 @@ ACR_NAME=$(az acr list -g "$RG" --query "[0].name" -o tsv)
 ADMIN=$(az acr show -n "$ACR_NAME" --query "adminUserEnabled" -o tsv)
 [[ "$ADMIN" == "false" ]] && pass "ACR admin disabled" || fail "ACR admin ENABLED"
 
-IDENTITY=$(az acr show -n "$ACR_NAME" --query "identity.type" -o tsv)
-[[ "$IDENTITY" == "SystemAssigned" ]] && pass "ACR identity enabled" || fail "ACR identity missing"
+PRINCIPAL_ID=$(az acr show -n "$ACR_NAME" --query "identity.principalId" -o tsv)
+if [[ -n "$PRINCIPAL_ID" && "$PRINCIPAL_ID" != "null" ]]; then
+  pass "ACR identity enabled"
+else
+  fail "ACR identity missing"
+fi
 
 # 4. Storage accounts private
 echo "4️⃣  Checking storage account network rules..."
