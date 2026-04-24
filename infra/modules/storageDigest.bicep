@@ -1,7 +1,8 @@
 param name string
 param location string
+param logAnalyticsWorkspaceId string
 
-resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+resource stgDigest 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: name
   location: location
   sku: {
@@ -22,9 +23,42 @@ resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 }
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-  parent: stg
+  parent: stgDigest
   name: 'default'
 }
 
-output webUrl string = stg.properties.primaryEndpoints.web
-output storageName string = stg.name
+resource digestDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'digestDiagnostics'
+  scope: stgDigest
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    logs: [
+      {
+        category: 'StorageRead'
+        enabled: true
+      }
+      {
+        category: 'StorageWrite'
+        enabled: true
+      }
+      {
+        category: 'StorageDelete'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'Transaction'
+        enabled: true
+      }
+      {
+        category: 'Capacity'
+        enabled: true
+      }
+    ]
+  }
+}
+
+
+output webUrl string = stgDigest.properties.primaryEndpoints.web
+output storageName string = stgDigest.name

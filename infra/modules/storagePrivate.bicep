@@ -1,7 +1,8 @@
 param name string
 param location string
+param logAnalyticsWorkspaceId string
 
-resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+resource stgPrivate 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: name
   location: location
   sku: {
@@ -20,5 +21,37 @@ resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-output storageId string = stg.id
-output storageName string = stg.name
+resource digestDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'digestDiagnostics'
+  scope: stgPrivate
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    logs: [
+      {
+        category: 'StorageRead'
+        enabled: true
+      }
+      {
+        category: 'StorageWrite'
+        enabled: true
+      }
+      {
+        category: 'StorageDelete'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'Transaction'
+        enabled: true
+      }
+      {
+        category: 'Capacity'
+        enabled: true
+      }
+    ]
+  }
+}
+
+output storageId string = stgPrivate.id
+output storageName string = stgPrivate.name
