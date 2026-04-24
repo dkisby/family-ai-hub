@@ -69,5 +69,6 @@ module acaEnv 'modules/acaEnvironment.bicep' = {
     location: location
     logAnalyticsCustomerId: logAnalytics.outputs.customerId
     logAnalyticsSharedKey: keyVaultRef.getSecret('la-shared-key')
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
   }
 }
