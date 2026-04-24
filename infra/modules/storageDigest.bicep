@@ -23,9 +23,23 @@ resource stgDigest 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 }
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-  parent: stgDigest
+  parent: stgDigest   // or stgPrivate
   name: 'default'
+  properties: {
+    deleteRetentionPolicy: {
+      enabled: true
+      days: 7
+    }
+    isVersioningEnabled: true
+    changeFeed: {
+      enabled: true
+    }
+    restorePolicy: {
+      enabled: false
+    }
+  }
 }
+
 
 resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2022-09-01' = {
   parent: stgDigest
