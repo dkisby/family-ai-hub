@@ -21,6 +21,26 @@ resource stgPrivate 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
+  parent: stgPrivate
+  name: 'default'
+}
+
+resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2022-09-01' = {
+  parent: stgPrivate
+  name: 'default'
+}
+
+resource tableService 'Microsoft.Storage/storageAccounts/tableServices@2022-09-01' = {
+  parent: stgPrivate
+  name: 'default'
+}
+
+resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2022-09-01' = {
+  parent: stgPrivate
+  name: 'default'
+}
+
 resource digestDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'digestDiagnostics'
   scope: stgPrivate

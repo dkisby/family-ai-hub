@@ -27,6 +27,21 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01'
   name: 'default'
 }
 
+resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2022-09-01' = {
+  parent: stgDigest
+  name: 'default'
+}
+
+resource tableService 'Microsoft.Storage/storageAccounts/tableServices@2022-09-01' = {
+  parent: stgDigest
+  name: 'default'
+}
+
+resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2022-09-01' = {
+  parent: stgDigest
+  name: 'default'
+}
+
 resource digestDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'digestDiagnostics'
   scope: stgDigest
