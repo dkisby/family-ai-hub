@@ -57,6 +57,7 @@ module acr './modules/acr.bicep' = {
   params: {
     name: 'acrfamilyhub'
     location: location
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
   }
 }
 
