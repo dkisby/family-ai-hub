@@ -44,6 +44,15 @@ param minReplicas int = 0
 @description('Maximum replicas')
 param maxReplicas int = 1
 
+@description('Azure OpenAI endpoint')
+param aoaiEndpoint string
+
+@description('Azure OpenAI deployment name')
+param aoaiDeploymentName string
+
+@description('Azure OpenAI Resource ID')
+param aoaiResourceId string
+
 resource acaEnv 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
   name: acaEnvironmentName
 }
@@ -101,6 +110,10 @@ resource webui 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'microsoft-provider-authentication-secret'
           value: aadClientSecret
         }
+        {
+          name: 'azure-openai-key'
+          value: listKeys(aoaiResourceId, '2023-05-01').key1
+        }
       ]
       dapr: {
         enabled: false
@@ -121,6 +134,14 @@ resource webui 'Microsoft.App/containerApps@2024-03-01' = {
               value: '8080'
             }
             {
+              name: 'AOAI_ENDPOINT'
+              value: aoaiEndpoint
+            }
+            {
+              name: 'AOAI_DEPLOYMENT_NAME'
+              value: aoaiDeploymentName
+            }
+            {
               name: 'WEBUI_AUTH'
               value: 'false'
             }
@@ -131,6 +152,22 @@ resource webui 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'LOGOUT_REDIRECT_URL'
               value: '/.auth/logout'
+            }
+            {
+              name: 'OPENWEBUI_MODEL'
+              value: 'azure:${aoaiDeploymentName}'
+            }
+            {
+              name: 'AZURE_OPENAI_ENDPOINT'
+              value: aoaiEndpoint
+            }
+            {
+              name: 'AZURE_OPENAI_API_VERSION'
+              value: '2024-02-15-preview'
+            }
+            {
+              name: 'AZURE_OPENAI_API_KEY'
+              secretRef: 'azure-openai-key'
             }
           ]
         }

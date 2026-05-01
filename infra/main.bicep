@@ -60,28 +60,6 @@ resource aadClientSecretKv 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   dependsOn: [keyVault]
 }
 
-resource webuiKvRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVaultRef.id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'id-webui-family-hub'), 'kvsecretsuser')
-  scope: keyVaultRef
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
-    principalId: webuiIdentity.outputs.principalId
-    principalType: 'ServicePrincipal'
-  }
-  dependsOn: [keyVault]
-}
-
-resource webuiKvReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVaultRef.id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'id-webui-family-hub'), 'kvreader')
-  scope: keyVaultRef
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '21090545-7ca7-4776-b22c-e363652d74d2')
-    principalId: webuiIdentity.outputs.principalId
-    principalType: 'ServicePrincipal'
-  }
-  dependsOn: [keyVault]
-}
-
 module storagePrivate './modules/storagePrivate.bicep' = {
   name: 'storagePrivate'
   params: {
@@ -135,6 +113,14 @@ module webuiAcrPull './modules/acrPullRoleAssignment.bicep' = {
   dependsOn: [acr]
 }
 
+module openAi './modules/openAi.bicep' = {
+  name: 'openAi'
+  params: {
+    name: 'aoai-family-hub'
+    location: location
+  }
+}
+
 module acaWebUI './modules/acaWebUI.bicep' = if (deployWebUI) {
   name: 'acaWebUI'
   params: {
@@ -153,10 +139,11 @@ module acaWebUI './modules/acaWebUI.bicep' = if (deployWebUI) {
     memory: '1Gi'
     minReplicas: 0
     maxReplicas: 1
+    aoaiEndpoint: openAi.outputs.endpoint
+    aoaiResourceId: openAi.outputs.aoaiResourceId
+    aoaiDeploymentName: openAi.outputs.deploymentName
   }
   dependsOn: [
-    webuiKvRole
-    webuiKvReaderRole
     webuiAcrPull
   ]
 }

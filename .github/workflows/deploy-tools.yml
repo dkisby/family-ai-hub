@@ -29,12 +29,14 @@ jobs:
           script -q -e -c "az containerapp exec --resource-group ${{ secrets.AZURE_RG }} --name $CONTAINER_APP --command \"$remote_cmd\"" /dev/null
         }
 
-        run_exec "sh -lc 'mkdir -p /app/backend/data/tools'"
+        # Create the tools directory
+        run_exec "sh -lc 'mkdir -p /open_webui/tools'"
 
+        # Upload each tool JSON file
         for file in tools/*.json; do
           echo "Deploying $file"
           encoded="$(base64 < "$file" | tr -d '\n')"
-          remote_file="/app/backend/data/tools/$(basename "$file")"
+          remote_file="/open_webui/tools/$(basename "$file")"
 
           run_exec "sh -lc 'printf %s \"$encoded\" | base64 -d > \"$remote_file\"'"
         done
