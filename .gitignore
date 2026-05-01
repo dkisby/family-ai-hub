@@ -1,6 +1,11 @@
-# Bicep build output
+# Ignore all JSON files
 *.json
+
+# Allow infra parameter JSON files
 !infra/parameters/*.json
+
+# Allow tool JSON files
+!tools/*.json
 
 # VS Code
 .vscode/

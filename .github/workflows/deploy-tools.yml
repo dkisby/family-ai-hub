@@ -1,0 +1,36 @@
+name: Deploy Tools to WebUI
+
+on:
+  workflow_dispatch:
+
+env:
+  CONTAINER_APP: webui-family-hub
+
+jobs:
+  deploy-tools:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS_TOOLS }}
+
+    - name: Upload tools to WebUI volume
+      run: |
+        for file in tools/*.json; do
+          echo "Deploying $file"
+          az containerapp exec \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --name $CONTAINER_APP \
+            --command "cat > /app/backend/data/tools/$(basename $file)" < $file
+        done
+
+    - name: Restart WebUI revision
+      run: |
+        az containerapp revision restart \
+          --resource-group ${{ secrets.AZURE_RG }} \
+          --name $CONTAINER_APP
