@@ -2,13 +2,13 @@ param name string
 param location string
 
 @description('Model deployment name in Azure OpenAI account')
-param deploymentName string = 'gpt-4o-mini'
+param deploymentName string = 'gpt-4.1-mini'
 
 @description('Azure OpenAI model name')
-param modelName string = 'gpt-4o-mini'
+param modelName string = 'gpt-4.1-mini'
 
 @description('Azure OpenAI model version (must be region-supported)')
-param modelVersion string = '2024-07-18'
+param modelVersion string = '2025-04-14'
 
 resource aoai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: name

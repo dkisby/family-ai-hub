@@ -17,13 +17,13 @@ param customDomainName string
 param enableCustomDomainTls bool = false
 
 @description('Azure OpenAI deployment name')
-param aoaiDeploymentName string = 'gpt-4o-mini'
+param aoaiDeploymentName string = 'gpt-4.1-mini'
 
 @description('Azure OpenAI model name')
-param aoaiModelName string = 'gpt-4o-mini'
+param aoaiModelName string = 'gpt-4.1-mini'
 
 @description('Azure OpenAI model version (must be supported in selected region)')
-param aoaiModelVersion string = '2024-07-18'
+param aoaiModelVersion string = '2025-04-14'
 
 var tenantId = tenant().tenantId
 var acaEnvName = 'aca-env-family-hub'
