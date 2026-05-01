@@ -41,6 +41,21 @@ jobs:
 
     - name: Restart WebUI revision
       run: |
+        set -euo pipefail
+
+        REVISION=$(az containerapp revision list \
+          --resource-group ${{ secrets.AZURE_RG }} \
+          --name $CONTAINER_APP \
+          --query "[?properties.active].name | [-1]" \
+          --output tsv)
+
+        if [ -z "$REVISION" ]; then
+          echo "No active revision found for $CONTAINER_APP"
+          exit 1
+        fi
+
+        echo "Restarting revision: $REVISION"
         az containerapp revision restart \
           --resource-group ${{ secrets.AZURE_RG }} \
-          --name $CONTAINER_APP
+          --name $CONTAINER_APP \
+          --revision "$REVISION"
