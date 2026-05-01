@@ -1,6 +1,15 @@
 param name string
 param location string
 
+@description('Model deployment name in Azure OpenAI account')
+param deploymentName string = 'gpt-4o-mini'
+
+@description('Azure OpenAI model name')
+param modelName string = 'gpt-4o-mini'
+
+@description('Azure OpenAI model version (must be region-supported)')
+param modelVersion string = '2024-07-18'
+
 resource aoai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: name
   location: location
@@ -14,13 +23,13 @@ resource aoai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
 }
 
 resource aoaiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
-  name: 'gpt-4o-mini'
+  name: deploymentName
   parent: aoai
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o-mini'
-      version: 'latest'
+      name: modelName
+      version: modelVersion
     }
     scaleSettings: {
       scaleType: 'Standard'

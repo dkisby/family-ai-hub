@@ -16,6 +16,15 @@ param customDomainName string
 @description('Enable TLS binding for custom domain on WebUI (set true only after hostname bootstrap deploy)')
 param enableCustomDomainTls bool = false
 
+@description('Azure OpenAI deployment name')
+param aoaiDeploymentName string = 'gpt-4o-mini'
+
+@description('Azure OpenAI model name')
+param aoaiModelName string = 'gpt-4o-mini'
+
+@description('Azure OpenAI model version (must be supported in selected region)')
+param aoaiModelVersion string = '2024-07-18'
+
 var tenantId = tenant().tenantId
 var acaEnvName = 'aca-env-family-hub'
 var logAnalyticsName = 'log-family-hub'
@@ -118,6 +127,9 @@ module openAi './modules/openAi.bicep' = {
   params: {
     name: 'aoai-family-hub'
     location: location
+    deploymentName: aoaiDeploymentName
+    modelName: aoaiModelName
+    modelVersion: aoaiModelVersion
   }
 }
 
