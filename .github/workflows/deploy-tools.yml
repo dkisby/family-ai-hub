@@ -21,12 +21,22 @@ jobs:
 
     - name: Upload tools to WebUI volume
       run: |
+        set -euo pipefail
+        shopt -s nullglob
+
+        run_exec() {
+          local remote_cmd="$1"
+          script -q -e -c "az containerapp exec --resource-group ${{ secrets.AZURE_RG }} --name $CONTAINER_APP --command \"$remote_cmd\"" /dev/null
+        }
+
+        run_exec "sh -lc 'mkdir -p /app/backend/data/tools'"
+
         for file in tools/*.json; do
           echo "Deploying $file"
-          az containerapp exec \
-            --resource-group ${{ secrets.AZURE_RG }} \
-            --name $CONTAINER_APP \
-            --command "cat > /app/backend/data/tools/$(basename $file)" < $file
+          encoded="$(base64 < "$file" | tr -d '\n')"
+          remote_file="/app/backend/data/tools/$(basename "$file")"
+
+          run_exec "sh -lc 'printf %s \"$encoded\" | base64 -d > \"$remote_file\"'"
         done
 
     - name: Restart WebUI revision
