@@ -3,6 +3,15 @@
   "parameters": {
     "location": {
       "value": "swedencentral"
+    },
+    "aoaiDeploymentName": {
+      "value": "gpt-4.1-mini"
+    },
+    "aoaiModelName": {
+      "value": "gpt-4.1-mini"
+    },
+    "aoaiModelVersion": {
+      "value": "2025-04-14"
     }
   }
 }

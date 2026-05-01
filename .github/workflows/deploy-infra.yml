@@ -27,6 +27,9 @@ jobs:
           --resource-group ${{ secrets.AZURE_RG }} \
           --template-file infra/main.bicep \
           --parameters infra/parameters/main.parameters.json \
+          --parameters aoaiDeploymentName="gpt-4.1-mini" \
+          --parameters aoaiModelName="gpt-4.1-mini" \
+          --parameters aoaiModelVersion="2025-04-14" \
           --parameters webuiAadClientId="${{ secrets.WEBUI_AAD_CLIENT_ID }}" \
           --parameters webuiAadClientSecret="${{ secrets.WEBUI_AAD_CLIENT_SECRET }}" \
           --parameters customDomainName="${{ vars.CUSTOM_DOMAIN_NAME }}" \
@@ -71,6 +74,9 @@ jobs:
           --resource-group ${{ secrets.AZURE_RG }} \
           --template-file infra/main.bicep \
           --parameters infra/parameters/main.parameters.json \
+          --parameters aoaiDeploymentName="gpt-4.1-mini" \
+          --parameters aoaiModelName="gpt-4.1-mini" \
+          --parameters aoaiModelVersion="2025-04-14" \
           --parameters webuiAadClientId="${{ secrets.WEBUI_AAD_CLIENT_ID }}" \
           --parameters webuiAadClientSecret="${{ secrets.WEBUI_AAD_CLIENT_SECRET }}" \
           --parameters customDomainName="${{ vars.CUSTOM_DOMAIN_NAME }}" \
@@ -83,6 +89,9 @@ jobs:
           --resource-group ${{ secrets.AZURE_RG }} \
           --template-file infra/main.bicep \
           --parameters infra/parameters/main.parameters.json \
+          --parameters aoaiDeploymentName="gpt-4.1-mini" \
+          --parameters aoaiModelName="gpt-4.1-mini" \
+          --parameters aoaiModelVersion="2025-04-14" \
           --parameters webuiAadClientId="${{ secrets.WEBUI_AAD_CLIENT_ID }}" \
           --parameters webuiAadClientSecret="${{ secrets.WEBUI_AAD_CLIENT_SECRET }}" \
           --parameters customDomainName="${{ vars.CUSTOM_DOMAIN_NAME }}" \
