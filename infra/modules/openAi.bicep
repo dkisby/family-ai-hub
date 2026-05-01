@@ -25,14 +25,15 @@ resource aoai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
 resource aoaiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
   name: deploymentName
   parent: aoai
+  sku: {
+    name: 'Standard'
+    capacity: 1
+  }
   properties: {
     model: {
       format: 'OpenAI'
       name: modelName
       version: modelVersion
-    }
-    scaleSettings: {
-      scaleType: 'Standard'
     }
   }
 }
