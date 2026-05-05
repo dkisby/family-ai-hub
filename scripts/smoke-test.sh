@@ -41,6 +41,7 @@ check_resource "Microsoft.KeyVault/vaults" "Key Vault"
 check_resource "Microsoft.Storage/storageAccounts" "Storage Accounts"
 check_resource "Microsoft.ContainerRegistry/registries" "Container Registry"
 check_resource "Microsoft.App/managedEnvironments" "ACA Environment"
+check_resource "Microsoft.CognitiveServices/accounts" "Foundry AI Services Resource"
 
 # 3. ACR identity + admin disabled
 echo "3️⃣  Checking ACR configuration..."
@@ -86,6 +87,7 @@ SKIP_DIAGNOSTICS=(
   "webui-family-hub"    # Container Apps diagnostics not supported
   "id-webui-family-hub" # Managed identities don't support diagnostic settings
   "managedCertificates" # Managed certificates don't support diagnostic settings
+  "aoai-family-hub"     # Deprecated: migrated to Foundry (ai-family-hub)
 )
 
 for ID in $(az resource list -g "$RG" --query "[].id" -o tsv); do
