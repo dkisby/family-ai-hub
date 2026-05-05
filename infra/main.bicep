@@ -155,7 +155,7 @@ module acaWebUI './modules/acaWebUI.bicep' = if (deployWebUI) {
     memory: '1Gi'
     minReplicas: 0
     maxReplicas: 1
-    foundryEndpoint: foundryResource.outputs.endpoint
+    foundryEndpoint: foundryResource.outputs.openaiEndpoint
     foundryResourceId: foundryResource.outputs.resourceId
     foundryDefaultModel: foundryDefaultModel
   }
