@@ -7,7 +7,6 @@ param defaultModelName string = 'gpt-4o'
 @description('Default model version')
 param defaultModelVersion string = '2024-12-19'
 
-// Extract account name from resource ID
 var accountName = split(aiServicesResourceId, '/')[8]
 
 @description('Deploy default model to AI Services account')

@@ -22,7 +22,7 @@ resource stgDigest 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 }
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-  parent: stgDigest   // or stgPrivate
+  parent: stgDigest
   name: 'default'
   properties: {
     deleteRetentionPolicy: {

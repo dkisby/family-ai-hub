@@ -23,7 +23,7 @@ resource kv 'Microsoft.KeyVault/vaults@2023-02-01' = {
 
 resource kvDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'kvDiagnostics'
-  scope: kv   // <-- your Key Vault resource symbol
+  scope: kv
   properties: {
     workspaceId: logAnalyticsWorkspaceId
     logs: [
