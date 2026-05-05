@@ -1,5 +1,6 @@
 param name string
 param location string
+param logAnalyticsWorkspaceId string
 
 @description('Model deployment name in Azure OpenAI account')
 param deploymentName string = 'gpt-4.1-mini'
@@ -35,6 +36,34 @@ resource aoaiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-0
       name: modelName
       version: modelVersion
     }
+  }
+}
+
+resource aoaiDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'aoaiDiagnostics'
+  scope: aoai
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    logs: [
+      {
+        category: 'Audit'
+        enabled: true
+      }
+      {
+        category: 'RequestResponse'
+        enabled: true
+      }
+      {
+        category: 'Trace'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
   }
 }
 

@@ -16,14 +16,11 @@ param customDomainName string
 @description('Enable TLS binding for custom domain on WebUI (set true only after hostname bootstrap deploy)')
 param enableCustomDomainTls bool = false
 
-@description('Azure OpenAI deployment name')
-param aoaiDeploymentName string = 'gpt-4.1-mini'
+@description('Foundry default model name')
+param foundryDefaultModel string = 'gpt-4.1-mini'
 
-@description('Azure OpenAI model name')
-param aoaiModelName string = 'gpt-4.1-mini'
-
-@description('Azure OpenAI model version (must be supported in selected region)')
-param aoaiModelVersion string = '2025-04-14'
+@description('Foundry model version')
+param foundryModelVersion string = '2025-04-14'
 
 var tenantId = tenant().tenantId
 var acaEnvName = 'aca-env-family-hub'
@@ -122,14 +119,21 @@ module webuiAcrPull './modules/acrPullRoleAssignment.bicep' = {
   dependsOn: [acr]
 }
 
-module openAi './modules/openAi.bicep' = {
-  name: 'openAi'
+module foundryResource './modules/foundryResource.bicep' = {
+  name: 'foundryResource'
   params: {
-    name: 'aoai-family-hub'
+    resourceName: 'ai-family-hub'
     location: location
-    deploymentName: aoaiDeploymentName
-    modelName: aoaiModelName
-    modelVersion: aoaiModelVersion
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+  }
+}
+
+module foundryProject './modules/foundryProject.bicep' = {
+  name: 'foundryProject'
+  params: {
+    aiServicesResourceId: foundryResource.outputs.resourceId
+    defaultModelName: foundryDefaultModel
+    defaultModelVersion: foundryModelVersion
   }
 }
 
@@ -151,11 +155,11 @@ module acaWebUI './modules/acaWebUI.bicep' = if (deployWebUI) {
     memory: '1Gi'
     minReplicas: 0
     maxReplicas: 1
-    aoaiEndpoint: openAi.outputs.endpoint
-    aoaiResourceId: openAi.outputs.aoaiResourceId
-    aoaiDeploymentName: openAi.outputs.deploymentName
+    foundryEndpoint: foundryResource.outputs.endpoint
+    foundryResourceId: foundryResource.outputs.resourceId
+    foundryDefaultModel: foundryDefaultModel
   }
   dependsOn: [
-    webuiAcrPull
+    webuiAcrPull, foundryProject
   ]
 }

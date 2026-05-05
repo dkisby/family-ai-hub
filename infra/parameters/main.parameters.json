@@ -4,13 +4,10 @@
     "location": {
       "value": "swedencentral"
     },
-    "aoaiDeploymentName": {
+    "foundryDefaultModel": {
       "value": "gpt-4.1-mini"
     },
-    "aoaiModelName": {
-      "value": "gpt-4.1-mini"
-    },
-    "aoaiModelVersion": {
+    "foundryModelVersion": {
       "value": "2025-04-14"
     }
   }
