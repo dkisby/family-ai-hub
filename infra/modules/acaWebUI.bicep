@@ -150,8 +150,8 @@ resource webui 'Microsoft.App/containerApps@2024-03-01' = {
             value: '2024-12-01-preview'
           }
           {
-            name: 'DEFAULT_MODEL'
-            value: foundryDefaultModel
+            name: 'ENABLE_OLLAMA_API'
+            value: 'false'
           }
           {
             name: 'WEBUI_AUTH'
@@ -164,6 +164,10 @@ resource webui 'Microsoft.App/containerApps@2024-03-01' = {
           {
             name: 'DEFAULT_USER_ROLE'
             value: 'user'
+          }
+          {
+            name: 'DEFAULT_MODEL'
+            value: foundryDefaultModel
           }
           {
             name: 'LOGOUT_REDIRECT_URL'

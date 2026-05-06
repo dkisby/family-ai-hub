@@ -53,5 +53,5 @@ resource aiServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01
 
 output resourceId string = aiServices.id
 output endpoint string = aiServices.properties.endpoint
-output openaiEndpoint string = '${aiServices.properties.endpoint}openai'
+output openaiEndpoint string = '${aiServices.properties.endpoint}openai/v1'
 output resourceName string = aiServices.name
