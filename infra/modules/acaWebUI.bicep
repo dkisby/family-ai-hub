@@ -129,39 +129,47 @@ resource webui 'Microsoft.App/containerApps@2024-03-01' = {
             memory: memory
           }
           env: [
-            {
-              name: 'PORT'
-              value: '8080'
-            }
-            {
-              name: 'OPENAI_API_BASE_URL'
-              value: foundryEndpoint
-            }
-            {
-              name: 'OPENAI_API_KEY'
-              secretRef: 'foundry-api-key'
-            }
-            {
-              name: 'OPENAI_API_CONFIGS'
-              value: '{"0":{"azure":true,"model_ids":["${foundryDefaultModel}"],"api_version":"2024-12-01-preview"}}'
-            }
-            {
-              name: 'WEBUI_AUTH'
-              value: 'false'
-            }
-            {
-              name: 'WEBUI_AUTH_TRUSTED_EMAIL_HEADER'
-              value: 'X-MS-CLIENT-PRINCIPAL-NAME'
-            }
-            {
-              name: 'LOGOUT_REDIRECT_URL'
-              value: '/.auth/logout'
-            }
-            {
-              name: 'OPENWEBUI_DEFAULT_MODEL'
-              value: foundryDefaultModel
-            }
-          ]
+          {
+            name: 'PORT'
+            value: '8080'
+          }
+          {
+            name: 'OPENAI_API_BASE_URL'
+            value: foundryEndpoint
+          }
+          {
+            name: 'OPENAI_API_KEY'
+            secretRef: 'foundry-api-key'
+          }
+          {
+            name: 'OPENAI_API_TYPE'
+            value: 'azure'
+          }
+          {
+            name: 'OPENAI_API_VERSION'
+            value: '2024-12-01-preview'
+          }
+          {
+            name: 'DEFAULT_MODEL'
+            value: foundryDefaultModel
+          }
+          {
+            name: 'WEBUI_AUTH'
+            value: 'true'
+          }
+          {
+            name: 'WEBUI_AUTH_TRUSTED_EMAIL_HEADER'
+            value: 'X-MS-CLIENT-PRINCIPAL-NAME'
+          }
+          {
+            name: 'DEFAULT_USER_ROLE'
+            value: 'user'
+          }
+          {
+            name: 'LOGOUT_REDIRECT_URL'
+            value: '/.auth/logout'
+          }
+        ]
         }
       ]
       scale: {
