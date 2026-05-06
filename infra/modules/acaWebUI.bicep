@@ -142,8 +142,8 @@ resource webui 'Microsoft.App/containerApps@2024-03-01' = {
               secretRef: 'foundry-api-key'
             }
             {
-              name: 'OPENAI_API_VERSION'
-              value: '2024-12-01-preview'
+              name: 'OPENAI_API_CONFIGS'
+              value: '{"0":{"azure":true,"model_ids":["${foundryDefaultModel}"],"api_version":"2024-12-01-preview"}}'
             }
             {
               name: 'WEBUI_AUTH'
