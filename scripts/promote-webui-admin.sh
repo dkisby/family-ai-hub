@@ -1,5 +1,6 @@
 #!/bin/bash
 # Promote WebUI admin user by email
+# Usage: ./scripts/promote-webui-admin.sh [email] [resource-group] [container-app]
 
 set -e
 
@@ -10,17 +11,13 @@ CONTAINER_APP="${3:-webui-family-hub}"
 echo "Promoting WebUI admin: $ADMIN_EMAIL"
 echo "  Container App: $CONTAINER_APP"
 echo "  Resource Group: $RESOURCE_GROUP"
+echo ""
 
-# Create a temporary script file on local machine
-TEMP_SCRIPT=$(mktemp)
-cat > "$TEMP_SCRIPT" << 'PYTHON_SCRIPT'
-import sqlite3
-import time
-import sys
-
-admin_email = sys.argv[1]
-db_path = '/app/backend/data/webui.db'
-
+# Build Python command as a single string (avoids stdin/tty issues)
+PYTHON_CMD='
+import sqlite3, time, sys
+admin_email = "'$ADMIN_EMAIL'"
+db_path = "/app/backend/data/webui.db"
 print(f"Setting up admin for {admin_email}...")
 
 for attempt in range(10):
@@ -29,61 +26,68 @@ for attempt in range(10):
         cur = conn.cursor()
         
         # Check current
-        cur.execute('SELECT email, role FROM users WHERE email=?', (admin_email,))
+        cur.execute("SELECT email, role FROM users WHERE email=?", (admin_email,))
         existing = cur.fetchone()
         
         if existing:
-            print(f"Before: {existing}")
+            print(f"  Before: {existing}")
+        else:
+            print(f"  User {admin_email} not yet in database")
         
-        # Promote
-        cur.execute("UPDATE users SET role='admin' WHERE email=?", (admin_email,))
+        # Promote to admin
+        cur.execute("UPDATE users SET role='\''admin'\'' WHERE email=?", (admin_email,))
         conn.commit()
+        print(f"  Updated {cur.rowcount} user(s) to admin role")
         
         # Verify
-        cur.execute('SELECT email, role FROM users WHERE email=?', (admin_email,))
+        cur.execute("SELECT email, role FROM users WHERE email=?", (admin_email,))
         updated = cur.fetchone()
         
         if updated:
-            print(f"After:  {updated}")
-            print(f"✓ Admin promotion complete for {admin_email}")
-        else:
-            print(f"User {admin_email} not found in database")
-            print("Note: User will be auto-created on first EasyAuth login")
+            print(f"  After:  {updated}")
         
         # Show all users
-        cur.execute('SELECT email, role FROM users')
-        print("\nAll users in database:")
+        cur.execute("SELECT email, role FROM users")
+        print("\n  All users in database:")
         for row in cur.fetchall():
-            print(f"  {row}")
+            print(f"    {row}")
         
         conn.close()
-        sys.exit(0)
+        print(f"\n✓ Admin promotion complete for {admin_email}")
+        break
         
     except sqlite3.OperationalError as e:
         if attempt < 9:
-            print(f"Attempt {attempt + 1}/10: Database not ready, retrying...")
+            print(f"  Attempt {attempt + 1}/10: Database not ready, retrying...")
             time.sleep(2)
         else:
-            print(f"ERROR: Could not connect to database: {e}")
+            print(f"  ERROR: Could not connect to database: {e}")
             sys.exit(1)
     except Exception as e:
-        print(f"ERROR: {e}")
+        print(f"  ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
-PYTHON_SCRIPT
+'
 
-# Execute in container via az CLI
+# Execute directly in container without stdin redirection
+# -c passes code via command line argument instead of stdin
 az containerapp exec \
   --resource-group "$RESOURCE_GROUP" \
   --name "$CONTAINER_APP" \
-  --command "python3 /tmp/admin_setup.py '$ADMIN_EMAIL'" \
-  < "$TEMP_SCRIPT" || {
+  --command "python3 -c '$PYTHON_CMD'" || {
     echo ""
-    echo "Alternative: Run this manually in the container:"
-    echo "  az containerapp exec --name $CONTAINER_APP --resource-group $RESOURCE_GROUP --command 'python3'"
-    rm -f "$TEMP_SCRIPT"
+    echo "ERROR: Failed to run admin promotion"
+    echo ""
+    echo "Manual alternative:"
+    echo "  az containerapp exec"
+    echo "    --resource-group $RESOURCE_GROUP"
+    echo "    --name $CONTAINER_APP"
+    echo "    --command python3"
+    echo "  Then paste:"
+    echo "    import sqlite3; c=sqlite3.connect('/app/backend/data/webui.db'); c.execute(\"UPDATE users SET role='admin' WHERE email='$ADMIN_EMAIL'\"); c.commit(); c.close(); print('Done')"
     exit 1
   }
 
-rm -f "$TEMP_SCRIPT"
 echo ""
-echo "✓ Done! Check WebUI to verify admin access."
+echo "✓ Verify admin access in WebUI settings"
