@@ -130,3 +130,36 @@ jobs:
       run: |
         chmod +x scripts/smoke-test.sh
         bash scripts/smoke-test.sh ${{ secrets.AZURE_RG }}
+
+    - name: Setup WebUI admin user
+      run: |
+        echo "Setting up admin user: ${{ secrets.WEBUI_ADMIN_EMAIL }}"
+        az containerapp exec \
+          --resource-group ${{ secrets.AZURE_RG }} \
+          --name webui-family-hub \
+          --command "python3 << 'SETUP_SCRIPT'
+import sqlite3
+import os
+import time
+
+admin_email = '${{ secrets.WEBUI_ADMIN_EMAIL }}'
+db_path = '/app/backend/data/webui.db'
+
+# Retry if database not ready
+for attempt in range(10):
+    try:
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute(\"UPDATE users SET role='admin' WHERE email=?\", (admin_email,))
+        conn.commit()
+        print(f'Admin setup complete: {admin_email} (updated {cur.rowcount} user)')
+        cur.execute('SELECT email, role FROM users')
+        print('Users:', cur.fetchall())
+        conn.close()
+        break
+    except Exception as e:
+        if attempt < 9:
+            time.sleep(2)
+        else:
+            print(f'Warning: Could not update admin: {e}')
+SETUP_SCRIPT"
