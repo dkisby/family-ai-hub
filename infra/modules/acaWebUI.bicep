@@ -53,6 +53,9 @@ param foundryResourceId string
 @description('Foundry default model name')
 param foundryDefaultModel string = 'gpt-4o'
 
+@description('WebUI admin email address')
+param webuiAdminEmail string
+
 resource acaEnv 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
   name: acaEnvironmentName
 }
@@ -172,6 +175,10 @@ resource webui 'Microsoft.App/containerApps@2024-03-01' = {
           {
             name: 'LOGOUT_REDIRECT_URL'
             value: '/.auth/logout'
+          }
+          {
+            name: 'WEBUI_ADMIN_EMAIL'
+            value: webuiAdminEmail
           }
         ]
         }

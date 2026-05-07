@@ -22,6 +22,9 @@ param foundryDefaultModel string = 'gpt-4.1-mini'
 @description('Foundry model version')
 param foundryModelVersion string = '2025-04-14'
 
+@description('WebUI admin email address')
+param webuiAdminEmail string
+
 var tenantId = tenant().tenantId
 var acaEnvName = 'aca-env-family-hub'
 var logAnalyticsName = 'log-family-hub'
@@ -158,6 +161,7 @@ module acaWebUI './modules/acaWebUI.bicep' = if (deployWebUI) {
     foundryEndpoint: foundryResource.outputs.openaiEndpoint
     foundryResourceId: foundryResource.outputs.resourceId
     foundryDefaultModel: foundryDefaultModel
+    webuiAdminEmail: webuiAdminEmail
   }
   dependsOn: [
     webuiAcrPull, foundryProject
