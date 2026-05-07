@@ -2,9 +2,11 @@ name: Deploy Tools to WebUI
 
 on:
   workflow_dispatch:
-
+permissions:
+  contents: read
 env:
   CONTAINER_APP: webui-family-hub
+  WEBUI_URL: ${{ secrets.WEBUI_URL }}
 
 jobs:
   deploy-tools:
@@ -14,50 +16,17 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS_TOOLS }}
-
-    - name: Upload tools to WebUI volume
+    - name: Deploy tools via WebUI API
       run: |
         set -euo pipefail
         shopt -s nullglob
 
-        run_exec() {
-          local remote_cmd="$1"
-          script -q -e -c "az containerapp exec --resource-group ${{ secrets.AZURE_RG }} --name $CONTAINER_APP --command \"$remote_cmd\"" /dev/null
-        }
-
-        # Create the tools directory
-        run_exec "sh -lc 'mkdir -p /open_webui/tools'"
-
-        # Upload each tool JSON file
         for file in tools/*.json; do
-          echo "Deploying $file"
-          encoded="$(base64 < "$file" | tr -d '\n')"
-          remote_file="/open_webui/tools/$(basename "$file")"
+          echo "Deploying tool: $file"
 
-          run_exec "sh -lc 'printf %s \"$encoded\" | base64 -d > \"$remote_file\"'"
+          curl -X POST "https://${{ vars.CUSTOM_DOMAIN_NAME }}/api/tools" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WEBUI_API_KEY }}" \
+            -d @"$file" \
+            || echo "Tool may already exist — continuing"
         done
-
-    - name: Restart WebUI revision
-      run: |
-        set -euo pipefail
-
-        REVISION=$(az containerapp revision list \
-          --resource-group ${{ secrets.AZURE_RG }} \
-          --name $CONTAINER_APP \
-          --query "[?properties.active].name | [-1]" \
-          --output tsv)
-
-        if [ -z "$REVISION" ]; then
-          echo "No active revision found for $CONTAINER_APP"
-          exit 1
-        fi
-
-        echo "Restarting revision: $REVISION"
-        az containerapp revision restart \
-          --resource-group ${{ secrets.AZURE_RG }} \
-          --name $CONTAINER_APP \
-          --revision "$REVISION"
