@@ -2,7 +2,7 @@
 
 ## ✅ All Systems Ready
 
-**Date:** May 8, 2024  
+**Date:** May 8, 2026  
 **Status:** Production-ready for local testing and Azure deployment
 
 ---
@@ -24,15 +24,26 @@
 **Features:**
 - ✅ Entra ID authentication (MSAL React)
 - ✅ ChatUI component with streaming support
-- ✅ API client with Bearer token injection
+- ✅ API client with Fetch-based streaming
 - ✅ Tailwind CSS styling
 - ✅ TypeScript strict mode
+- ✅ Docker build ready (nginx + multi-stage build)
 
 **Run Locally:**
 ```bash
 cd build/frontend
 npm run dev            # Start dev server (port 3000)
 npm run build          # Production build
+```
+
+**Docker Build:**
+```bash
+cd build/frontend
+docker build \
+  --build-arg VITE_ENTRA_TENANT_ID=<tenant-id> \
+  --build-arg VITE_ENTRA_CLIENT_ID=<client-id> \
+  --build-arg VITE_BACKEND_API_URL=<backend-url> \
+  -t frontend-family-hub:latest .
 ```
 
 ---
@@ -46,10 +57,11 @@ npm run build          # Production build
 **Features:**
 - ✅ ExpressJS REST API
 - ✅ Foundry/Azure OpenAI integration
-- ✅ Streaming chat responses
+- ✅ Streaming chat responses (NDJSON format)
 - ✅ MCP-style tool framework (calculator, search, get_time)
 - ✅ Entra JWT token validation
 - ✅ Multi-stage Docker build ready
+- ✅ Environment variable configuration
 
 **Endpoints:**
 - `POST /api/chat` — Single message response
@@ -64,29 +76,34 @@ npm run build          # Compile TypeScript
 npm run start          # Run compiled version
 ```
 
----
-
-## Infrastructure Validation ✅
-
-**File:** `infra/main-new.bicep`  
-**Status:** COMPILES SUCCESSFULLY
-
-**Modules:**
-- ✅ `modules/staticWebApp.bicep` — React SPA hosting
-- ✅ `modules/acaBackendAPI.bicep` — Backend Container App
-- ✅ `modules/foundryResource.bicep` — Azure OpenAI/Foundry
-- ✅ `modules/acaEnvironment.bicep` — Container Apps Environment
-
-**Deployment Variables:**
-```bicep
-deployReactFrontend: bool = true          # Deploy React Static Web App
-deployBackendAPI: bool = true             # Deploy Express API Container App
+**Environment Variables:**
+```
+FOUNDRY_ENDPOINT=<your-foundry-endpoint>
+FOUNDRY_API_KEY=<your-api-key>
+ENTRA_TENANT_ID=<your-entra-tenant-id>
+NODE_ENV=production
 ```
 
-**Warnings (Non-Critical):**
-- BCP318: Conditional null checks (9 instances) — Expected for conditional deployments
-- BCP073: Read-only property on SWA (expected limitation)
-- No-unused-params: githubToken in staticWebApp.bicep (for future use)
+---
+
+## Infrastructure ✅
+
+**File:** `infra/main.bicep`  
+**Status:** CLEAN & PRODUCTION-READY
+
+**Modules:**
+- ✅ `modules/logAnalytics.bicep` — Monitoring and logging
+- ✅ `modules/keyVault.bicep` — Secret management
+- ✅ `modules/acr.bicep` — Azure Container Registry
+- ✅ `modules/acaEnvironment.bicep` — Container Apps Environment
+- ✅ `modules/acaBackendAPI.bicep` — Backend Container App
+- ✅ `modules/foundryResource.bicep` — Azure OpenAI/Foundry
+- ✅ `modules/managedIdentity.bicep` — Container identity
+
+**Deployment Model:**
+- Frontend: Docker container on Container Apps (nginx + React SPA)
+- Backend: Docker container on Container Apps (Express API)
+- No Static Web App or WebUI infrastructure
 
 ---
 
@@ -96,39 +113,66 @@ deployBackendAPI: bool = true             # Deploy Express API Container App
 **Status:** READY TO RUN
 
 **Pipeline Stages:**
-1. **Lint & Build Frontend**
-   - ESLint + TypeScript check
-   - Vite production build
-   - Artifact: `frontend-build.zip`
-
-2. **Lint & Build Backend Docker**
-   - ESLint + TypeScript check
-   - Multi-stage Docker build
+1. **Build Frontend Docker Image**
+   - Build React SPA with Vite
+   - Package with nginx in multi-stage Docker build
    - Push to Azure Container Registry
 
-3. **Deploy Infrastructure**
-   - Bicep validation and deployment
-   - RBAC role assignments
-   - Key Vault secret injection
+2. **Build Backend Docker Image**
+   - Lint & TypeScript check
+   - Compile Node.js application
+   - Build multi-stage Docker image
+   - Push to Azure Container Registry
 
-4. **Deploy Applications**
-   - Static Web App deployment (frontend)
-   - Container App deployment (backend)
+3. **Deploy Frontend to Container Apps**
+   - Update frontend Container App with new image
+   - Automatic rolling deployment
 
-5. **Health Checks**
-   - POST /health to backend
-   - Verify SPA is accessible
+4. **Deploy Backend to Container Apps**
+   - Update backend Container App with new image
+   - Inject environment variables (FOUNDRY_ENDPOINT, FOUNDRY_API_KEY, etc.)
+   - Automatic rolling deployment
+
+5. **Integration Tests**
+   - Health check on backend API
+   - Verify frontend accessibility
+   - Validate deployment URLs
 
 **Required GitHub Secrets:**
 ```
-AZURE_CLIENT_ID
-AZURE_TENANT_ID
-AZURE_SUBSCRIPTION_ID
-ENTRA_TENANT_ID
-ENTRA_CLIENT_ID
-ENTRA_CLIENT_SECRET
-FOUNDRY_ENDPOINT
-FOUNDRY_API_KEY
+AZURE_CLIENT_ID                # Workload identity federation
+AZURE_TENANT_ID                # Your Entra tenant
+AZURE_SUBSCRIPTION_ID          # Your Azure subscription
+ENTRA_CLIENT_ID                # Your Entra app registration client ID
+BACKEND_API_URL                # Your deployed backend URL
+FOUNDRY_ENDPOINT               # Your Foundry/Azure OpenAI endpoint
+FOUNDRY_API_KEY                # Your Foundry API key
+```
+
+---
+
+## Local Testing ✅
+
+**Status:** Fully functional end-to-end
+
+**Test Flow:**
+1. Frontend (port 3000): User logs in via Entra ID
+2. Token acquired and stored in localStorage
+3. User types chat message
+4. Frontend sends to Backend (port 3001) with Bearer token
+5. Backend validates token, calls Foundry API
+6. Response streams back to frontend as NDJSON
+7. Frontend displays message incrementally
+
+**Run All Services:**
+```bash
+# Terminal 1: Frontend
+cd build/frontend && npm run dev
+
+# Terminal 2: Backend
+cd build/backend && npm run dev
+
+# Visit http://localhost:3000
 ```
 
 ---
@@ -137,17 +181,69 @@ FOUNDRY_API_KEY
 
 ### Frontend
 - 158 packages installed
-- 2 moderate vulnerabilities (development-only)
-- Engine warnings (Node 18 vs 20) — informational
+- TypeScript 5.2.0, React 18.2.0, Vite 5.0.0
+- MSAL React 1.5.0, Tailwind CSS 3.3.0
 
 ### Backend
-- 165 packages installed  
-- 4 vulnerabilities (3 moderate, 1 high) — development-only
-- Engine warnings — informational
-
-**All vulnerabilities are acceptable for development and can be addressed before production.**
+- 165 packages installed
+- Node 20, Express 4.18.0, TypeScript 5.2.0
+- Foundry/OpenAI client, Axios HTTP client
 
 ---
+
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│   Frontend (React SPA)              │
+│   Running on http://localhost:3000  │
+│   ├─ MSAL Authentication            │
+│   ├─ Chat UI Component              │
+│   └─ Fetch API client               │
+└────────────────┬────────────────────┘
+                 │ Bearer Token
+                 ▼
+┌─────────────────────────────────────┐
+│   Backend (Express API)             │
+│   Running on http://localhost:3001  │
+│   ├─ Token Validation Middleware    │
+│   ├─ Chat Stream Endpoint           │
+│   └─ Foundry Integration            │
+└────────────────┬────────────────────┘
+                 │ API Call
+                 ▼
+        ┌────────────────────┐
+        │   Foundry/Azure    │
+        │   OpenAI Services  │
+        └────────────────────┘
+```
+
+---
+
+## Next Steps
+
+1. **Create GitHub Secrets** (7 total) as listed above
+2. **Commit and push** all changes to main branch
+3. **GitHub Actions will automatically:**
+   - Build frontend/backend Docker images
+   - Push to Azure Container Registry
+   - Deploy both to Container Apps
+   - Run integration tests
+4. **Monitor deployment** in GitHub Actions tab
+5. **Access deployed app** at frontend Container App URL
+
+---
+
+## Known Good State
+
+- ✅ Frontend compiles without errors
+- ✅ Backend compiles without errors
+- ✅ Local development servers run smoothly
+- ✅ Authentication flow working (Entra login)
+- ✅ Streaming chat response working (incremental display)
+- ✅ Docker builds ready
+- ✅ GitHub Actions workflow configured
+- ✅ Infrastructure Bicep cleaned up
 
 ## Recent Fixes Applied
 
