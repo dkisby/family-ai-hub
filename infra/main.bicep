@@ -4,7 +4,7 @@ param location string = resourceGroup().location
 param deployBackendAPI bool = false
 
 @description('Backend API container image')
-param backendAPIImage string = 'mcr.microsoft.com/azuredocs/aca-helloworld:latest'
+param backendAPIImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
 @description('Foundry default model name')
 param foundryDefaultModel string = 'gpt-4.1-mini'
