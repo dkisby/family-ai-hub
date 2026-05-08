@@ -1,5 +1,14 @@
+// ============================================================
+// REACT FRONTEND + BACKEND API - NEW DEPLOYMENT ARCHITECTURE
+// ============================================================
+// This extended main.bicep adds modern React SPA + Node.js API
+// deployment alongside existing WebUI infrastructure
+
 param location string = resourceGroup().location
 
+// ====================
+// WebUI Parameters (Legacy - to be removed)
+// ====================
 @description('Entra app client ID for WebUI')
 param webuiAadClientId string
 
@@ -13,21 +22,37 @@ param deployWebUI bool = false
 @description('Custom domain name for the WebUI')
 param customDomainName string
 
-@description('Enable TLS binding for custom domain on WebUI (set true only after hostname bootstrap deploy)')
+@description('Enable TLS binding for custom domain on WebUI')
 param enableCustomDomainTls bool = false
 
+@description('WebUI admin email address')
+param webuiAdminEmail string
+
+// ====================
+// New Backend API Parameters
+// ====================
+@description('Whether to deploy the backend API')
+param deployBackendAPI bool = false
+
+@description('Backend API container image')
+param backendAPIImage string = 'acrfamilyhub.azurecr.io/backend-family-hub:latest'
+
+// ====================
+// Foundry Parameters
+// ====================
 @description('Foundry default model name')
 param foundryDefaultModel string = 'gpt-4.1-mini'
 
 @description('Foundry model version')
 param foundryModelVersion string = '2025-04-14'
 
-@description('WebUI admin email address')
-param webuiAdminEmail string
-
 var tenantId = tenant().tenantId
-var acaEnvName = 'aca-env-family-hub'
+var acaEnvName = 'env-family-hub'
 var logAnalyticsName = 'log-family-hub'
+
+// ============================================================
+// SHARED INFRASTRUCTURE (Log Analytics, Key Vault, Storage, ACR)
+// ============================================================
 
 module logAnalytics './modules/logAnalytics.bicep' = {
   name: 'logAnalytics'
@@ -57,7 +82,7 @@ resource laSharedKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   properties: {
     value: listKeys(resourceId('Microsoft.OperationalInsights/workspaces', logAnalyticsName), '2023-09-01').primarySharedKey
   }
-  dependsOn: [keyVault]
+  dependsOn: [logAnalytics]
 }
 
 resource aadClientSecretKv 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
@@ -105,10 +130,22 @@ module acaEnv 'modules/acaEnvironment.bicep' = {
   }
 }
 
+// ============================================================
+// MANAGED IDENTITIES
+// ============================================================
+
 module webuiIdentity './modules/managedIdentity.bicep' = {
   name: 'webuiIdentity'
   params: {
     name: 'id-webui-family-hub'
+    location: location
+  }
+}
+
+module backendIdentity './modules/managedIdentity.bicep' = if (deployBackendAPI) {
+  name: 'backendIdentity'
+  params: {
+    name: 'id-backend-family-hub'
     location: location
   }
 }
@@ -121,6 +158,19 @@ module webuiAcrPull './modules/acrPullRoleAssignment.bicep' = {
   }
   dependsOn: [acr]
 }
+
+module backendAcrPull './modules/acrPullRoleAssignment.bicep' = if (deployBackendAPI) {
+  name: 'backendAcrPull'
+  params: {
+    acrName: 'acrfamilyhub'
+    principalId: deployBackendAPI ? backendIdentity.outputs.principalId : ''
+  }
+  dependsOn: [acr]
+}
+
+// ============================================================
+// FOUNDRY (Azure OpenAI)
+// ============================================================
 
 module foundryResource './modules/foundryResource.bicep' = {
   name: 'foundryResource'
@@ -139,6 +189,10 @@ module foundryProject './modules/foundryProject.bicep' = {
     defaultModelVersion: foundryModelVersion
   }
 }
+
+// ============================================================
+// LEGACY: WebUI Container App (to be removed)
+// ============================================================
 
 module acaWebUI './modules/acaWebUI.bicep' = if (deployWebUI) {
   name: 'acaWebUI'
@@ -167,3 +221,39 @@ module acaWebUI './modules/acaWebUI.bicep' = if (deployWebUI) {
     webuiAcrPull, foundryProject
   ]
 }
+
+module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
+  name: 'backendAPI'
+  params: {
+    name: 'backend-family-hub'
+    location: location
+    acaEnvironmentName: acaEnvName
+    acrName: 'acrfamilyhub'
+    image: backendAPIImage
+    identityId: deployBackendAPI ? backendIdentity.outputs.identityId : ''
+    tenantId: tenantId
+    foundryEndpoint: foundryResource.outputs.openaiEndpoint
+    foundryApiKey: keyVaultRef.getSecret('foundry-api-key')
+    acaEnvironmentResourceGroup: resourceGroup().name
+    acaEnvironmentSubscription: subscription().subscriptionId
+  }
+  dependsOn: [
+    backendAcrPull, foundryProject, acaEnv
+  ]
+}
+
+// ============================================================
+// OUTPUTS
+// ============================================================
+
+@description('Backend API FQDN')
+output backendAPIFqdn string = deployBackendAPI ? backendAPI.outputs.containerAppFqdn : 'Not deployed'
+
+@description('Foundry endpoint')
+output foundryEndpoint string = foundryResource.outputs.openaiEndpoint
+
+@description('Container Apps environment ID')
+output acaEnvironmentId string = acaEnv.outputs.envId
+
+@description('Status: Backend API deployed')
+output backendDeployed bool = deployBackendAPI

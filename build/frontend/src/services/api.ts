@@ -50,26 +50,57 @@ class APIClient {
     request: ChatRequest,
     onChunk: (chunk: string) => void
   ): Promise<void> {
-    const response = await this.client.post("/api/chat/stream", request, {
-      responseType: "stream",
+    const token = this.client.defaults.headers.common["Authorization"];
+    
+    const response = await fetch(`${BACKEND_API_URL}/api/chat/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: token } : {}),
+      },
+      body: JSON.stringify(request),
     });
 
-    return new Promise((resolve, reject) => {
-      response.data.on("data", (chunk: Buffer) => {
-        const text = chunk.toString("utf8");
-        try {
-          const json = JSON.parse(text);
-          if (json.delta) {
-            onChunk(json.delta);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("No response body");
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+
+        // Keep the last incomplete line in buffer
+        buffer = lines[lines.length - 1];
+
+        for (let i = 0; i < lines.length - 1; i++) {
+          const line = lines[i].trim();
+          if (line) {
+            try {
+              const json = JSON.parse(line);
+              if (json.delta) {
+                onChunk(json.delta);
+              }
+            } catch {
+              // Skip invalid JSON lines
+            }
           }
-        } catch {
-          // Some chunks might not be valid JSON, skip
         }
-      });
-
-      response.data.on("end", resolve);
-      response.data.on("error", reject);
-    });
+      }
+    } finally {
+      reader.releaseLock();
+    }
   }
 
   async getHealth(): Promise<{ status: "ok" }> {

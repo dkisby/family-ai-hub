@@ -1,4 +1,4 @@
-import { PublicClientApplication } from "@azure/msal-browser";
+import { PublicClientApplication, LogLevel } from "@azure/msal-browser";
 
 const ENTRA_TENANT_ID = import.meta.env.VITE_ENTRA_TENANT_ID || "";
 const ENTRA_CLIENT_ID = import.meta.env.VITE_ENTRA_CLIENT_ID || "";
@@ -8,10 +8,21 @@ export const msalConfig = {
   auth: {
     clientId: ENTRA_CLIENT_ID,
     authority: `https://login.microsoftonline.com/${ENTRA_TENANT_ID}`,
-    redirectUri: `${window.location.origin}/auth/callback`,
+    redirectUri: `${window.location.origin}`,
   },
   cache: {
     cacheLocation: "localStorage",
+  },
+  system: {
+    loggerOptions: {
+      loggerCallback: (level: LogLevel, message: string, piiEnabled: boolean) => {
+        if (message.includes("MSAL")) {
+          console.log(`[MSAL] ${message}`);
+        }
+      },
+      piiLoggingEnabled: false,
+      logLevel: LogLevel.Info,
+    },
   },
 };
 

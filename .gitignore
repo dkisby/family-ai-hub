@@ -22,4 +22,4 @@ node_modules/
 
 # OS files
 .DS_Store
-Thumbs.db
+Thumbs.db.azure/

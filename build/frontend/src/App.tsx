@@ -19,21 +19,28 @@ function AuthenticatedApp() {
 
   useEffect(() => {
     const acquireToken = async () => {
+      setLoading(true);
       try {
+        if (!account) {
+          console.warn("No account available");
+          setLoading(false);
+          return;
+        }
+
         const response = await pca.acquireTokenSilent({
           ...loginRequest,
-          account: account || undefined,
+          account: account,
         });
         setToken(response.accessToken);
+        console.log("Token acquired successfully");
       } catch (error) {
         console.error("Token acquisition failed:", error);
+      } finally {
         setLoading(false);
       }
     };
 
-    if (account) {
-      acquireToken();
-    }
+    acquireToken();
   }, [account]);
 
   if (loading || !token) {
@@ -61,7 +68,11 @@ function AppContent() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Family Hub</h1>
           <p className="text-gray-600 mb-6">AI-Powered Chat Assistant</p>
           <button
-            onClick={() => instance.loginPopup(loginRequest)}
+            onClick={() => 
+              instance.loginPopup(loginRequest).catch((error) => {
+                console.error("Login error:", error);
+              })
+            }
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Sign In
