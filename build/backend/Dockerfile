@@ -3,19 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-RUN echo "=== Current directory ===" && pwd && \
-    echo "=== Files in /app ===" && ls -la
-
 COPY package*.json ./
 
-RUN echo "=== After COPY ===" && ls -la && \
-    echo "=== Contents of package.json ===" && head -5 package.json
-
-RUN npm config set legacy-peer-deps true && \
-    npm ci 2>&1 || (echo "npm ci FAILED"; exit 1)
-
-RUN echo "=== After npm ci ===" && \
-    ls -la node_modules/@types/ | grep node || echo "FAILED: @types/node missing"
+RUN npm config set legacy-peer-deps true && npm ci
 
 COPY src ./src
 COPY tsconfig.json .
@@ -28,8 +18,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm config set legacy-peer-deps true && \
-    npm ci --omit=dev
+RUN npm config set legacy-peer-deps true && npm ci --omit=dev
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
