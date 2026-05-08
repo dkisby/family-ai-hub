@@ -5,17 +5,18 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --legacy-peer-deps
+RUN npm install --no-audit --no-fund --legacy-peer-deps --verbose 2>&1 | tail -50
 
-RUN echo "=== Checking @types/node ===" && \
-    npm list @types/node && \
-    echo "=== Node modules contents ===" && \
-    ls -la node_modules/@types/ | head -20 || echo "@types directory not found"
+RUN if [ ! -d "node_modules" ]; then echo "ERROR: node_modules not created!"; ls -la; exit 1; fi && \
+    echo "=== Checking installation ===" && \
+    npm list --depth=0 && \
+    echo "=== Checking @types/node ===" && \
+    ls -la node_modules/@types/node/ | head -10 || echo "MISSING: @types/node"
 
 COPY src ./src
 COPY tsconfig.json .
 
-RUN echo "=== tsconfig.json ===" && cat tsconfig.json && echo "=== Running build ===" && npm run build
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine
