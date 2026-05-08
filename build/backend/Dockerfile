@@ -7,12 +7,15 @@ COPY package*.json ./
 
 RUN npm install --legacy-peer-deps
 
-RUN npm list @types/node
+RUN echo "=== Checking @types/node ===" && \
+    npm list @types/node && \
+    echo "=== Node modules contents ===" && \
+    ls -la node_modules/@types/ | head -20 || echo "@types directory not found"
 
 COPY src ./src
 COPY tsconfig.json .
 
-RUN npm run build
+RUN echo "=== tsconfig.json ===" && cat tsconfig.json && echo "=== Running build ===" && npm run build
 
 # Production stage
 FROM node:20-alpine
@@ -21,7 +24,7 @@ WORKDIR /app
 
 # Install only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --legacy-peer-deps --omit=dev
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
