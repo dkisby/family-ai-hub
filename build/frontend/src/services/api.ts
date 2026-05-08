@@ -51,13 +51,16 @@ class APIClient {
     onChunk: (chunk: string) => void
   ): Promise<void> {
     const token = this.client.defaults.headers.common["Authorization"];
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (token && typeof token === "string") {
+      headers["Authorization"] = token;
+    }
     
     const response = await fetch(`${BACKEND_API_URL}/api/chat/stream`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: token } : {}),
-      },
+      headers,
       body: JSON.stringify(request),
     });
 
