@@ -13,6 +13,11 @@
 !build/backend/package.json
 !build/backend/package-lock.json
 
+# Allow build config files
+!build/frontend/tsconfig.json
+!build/frontend/tsconfig.node.json
+!build/backend/tsconfig.json
+
 # VS Code
 .vscode/
 
