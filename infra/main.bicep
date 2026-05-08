@@ -3,8 +3,14 @@ param location string = resourceGroup().location
 @description('Whether to deploy the backend API')
 param deployBackendAPI bool = false
 
+@description('Whether to deploy the frontend UI')
+param deployFrontendUI bool = false
+
 @description('Backend API container image')
 param backendAPIImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
+
+@description('Frontend UI container image')
+param frontendUIImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
 @description('Foundry default model name')
 param foundryDefaultModel string = 'gpt-4.1-mini'
@@ -75,12 +81,30 @@ module backendIdentity './modules/managedIdentity.bicep' = if (deployBackendAPI)
   }
 }
 
+module frontendIdentity './modules/managedIdentity.bicep' = if (deployFrontendUI) {
+  name: 'frontendIdentity'
+  params: {
+    name: 'id-frontend-family-hub'
+    location: location
+  }
+}
+
 module backendAcrPull './modules/acrPullRoleAssignment.bicep' = if (deployBackendAPI) {
   name: 'backendAcrPull'
   params: {
     acrName: 'acrfamilyhub'
     #disable-next-line BCP318
     principalId: backendIdentity.outputs.principalId!
+  }
+  dependsOn: [acr]
+}
+
+module frontendAcrPull './modules/acrPullRoleAssignment.bicep' = if (deployFrontendUI) {
+  name: 'frontendAcrPull'
+  params: {
+    acrName: 'acrfamilyhub'
+    #disable-next-line BCP318
+    principalId: frontendIdentity.outputs.principalId!
   }
   dependsOn: [acr]
 }
@@ -124,9 +148,31 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
   ]
 }
 
+module frontendUI './modules/acaFrontendUI.bicep' = if (deployFrontendUI) {
+  name: 'frontendUI'
+  params: {
+    name: 'frontend-family-hub'
+    location: location
+    acaEnvironmentName: acaEnvName
+    acrName: 'acrfamilyhub'
+    image: frontendUIImage
+    #disable-next-line BCP318
+    identityId: frontendIdentity.outputs.identityId!
+    acaEnvironmentResourceGroup: resourceGroup().name
+    acaEnvironmentSubscription: subscription().subscriptionId
+  }
+  dependsOn: [
+    frontendAcrPull, acaEnv
+  ]
+}
+
 @description('Backend API FQDN')
 #disable-next-line BCP318
 output backendAPIFqdn string = deployBackendAPI ? backendAPI.outputs.containerAppFqdn! : 'Not deployed'
+
+@description('Frontend UI FQDN')
+#disable-next-line BCP318
+output frontendUIFqdn string = deployFrontendUI ? frontendUI.outputs.containerAppFqdn! : 'Not deployed'
 
 @description('Foundry endpoint')
 output foundryEndpoint string = foundryResource.outputs.openaiEndpoint
