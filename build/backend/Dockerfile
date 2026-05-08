@@ -3,17 +3,15 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
-# Copy source code
+RUN npm list @types/node
+
 COPY src ./src
 COPY tsconfig.json .
 
-# Build TypeScript
 RUN npm run build
 
 # Production stage
