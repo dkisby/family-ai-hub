@@ -4,7 +4,7 @@ param location string = resourceGroup().location
 param deployBackendAPI bool = false
 
 @description('Backend API container image')
-param backendAPIImage string = 'acrfamilyhub.azurecr.io/backend-family-hub:latest'
+param backendAPIImage string = 'mcr.microsoft.com/azuredocs/aca-helloworld:latest'
 
 @description('Foundry default model name')
 param foundryDefaultModel string = 'gpt-4.1-mini'
@@ -79,6 +79,7 @@ module backendAcrPull './modules/acrPullRoleAssignment.bicep' = if (deployBacken
   name: 'backendAcrPull'
   params: {
     acrName: 'acrfamilyhub'
+    #disable-next-line BCP318
     principalId: backendIdentity.outputs.principalId!
   }
   dependsOn: [acr]
@@ -110,6 +111,7 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
     acaEnvironmentName: acaEnvName
     acrName: 'acrfamilyhub'
     image: backendAPIImage
+    #disable-next-line BCP318
     identityId: backendIdentity.outputs.identityId!
     tenantId: tenantId
     foundryEndpoint: foundryResource.outputs.openaiEndpoint
@@ -123,6 +125,7 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
 }
 
 @description('Backend API FQDN')
+#disable-next-line BCP318
 output backendAPIFqdn string = deployBackendAPI ? backendAPI.outputs.containerAppFqdn! : 'Not deployed'
 
 @description('Foundry endpoint')
