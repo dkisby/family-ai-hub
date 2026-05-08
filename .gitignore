@@ -7,6 +7,12 @@
 # Allow tool JSON files
 !tools/*.json
 
+# Allow build package files
+!build/frontend/package.json
+!build/frontend/package-lock.json
+!build/backend/package.json
+!build/backend/package-lock.json
+
 # VS Code
 .vscode/
 
