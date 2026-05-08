@@ -3,12 +3,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+RUN echo "=== Current directory ===" && pwd && \
+    echo "=== Files in /app ===" && ls -la
+
 COPY package*.json ./
 
-RUN npm config set legacy-peer-deps true && \
-    npm ci --verbose || (echo "npm ci failed"; npm list; exit 1)
+RUN echo "=== After COPY ===" && ls -la && \
+    echo "=== Contents of package.json ===" && head -5 package.json
 
-RUN test -f node_modules/@types/node/package.json || (echo "ERROR: @types/node not installed"; ls -la node_modules/@types/ || echo "@types not found"; exit 1)
+RUN npm config set legacy-peer-deps true && \
+    npm ci 2>&1 || (echo "npm ci FAILED"; exit 1)
+
+RUN echo "=== After npm ci ===" && \
+    ls -la node_modules/@types/ | grep node || echo "FAILED: @types/node missing"
 
 COPY src ./src
 COPY tsconfig.json .
