@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import { BACKEND_API_URL } from "./auth/authConfig";
+import { BACKEND_API_URL } from "../auth/authConfig";
 
 export interface ChatMessage {
   id: string;

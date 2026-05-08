@@ -24,12 +24,18 @@ export class ToolService {
           b: number;
         };
 
-        const result = {
+        type Calculator = {
+          [key: string]: (x: number, y: number) => number | null;
+        };
+
+        const calculator: Calculator = {
           add: (x: number, y: number) => x + y,
           subtract: (x: number, y: number) => x - y,
           multiply: (x: number, y: number) => x * y,
           divide: (x: number, y: number) => (y !== 0 ? x / y : null),
-        }[operation]?.(a, b);
+        };
+
+        const result = calculator[operation]?.(a, b);
 
         return result;
       },

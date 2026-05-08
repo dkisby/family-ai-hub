@@ -8,7 +8,6 @@ import {
 import { PublicClientApplication } from "@azure/msal-browser";
 import { ChatUI } from "./components/ChatUI";
 import { msalConfig, loginRequest } from "./auth/authConfig";
-import "./App.css";
 
 const pca = new PublicClientApplication(msalConfig);
 
