@@ -3,15 +3,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY .npmrc package*.json ./
 
-RUN npm install --no-audit --no-fund --legacy-peer-deps --verbose 2>&1 | tail -50
+RUN npm ci
 
-RUN if [ ! -d "node_modules" ]; then echo "ERROR: node_modules not created!"; ls -la; exit 1; fi && \
-    echo "=== Checking installation ===" && \
-    npm list --depth=0 && \
-    echo "=== Checking @types/node ===" && \
-    ls -la node_modules/@types/node/ | head -10 || echo "MISSING: @types/node"
+RUN ls -la node_modules/@types/node || (echo "FAILED: @types/node not installed" && exit 1)
 
 COPY src ./src
 COPY tsconfig.json .
@@ -23,9 +19,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install only production dependencies
-COPY package*.json ./
-RUN npm install --legacy-peer-deps --omit=dev
+COPY .npmrc package*.json ./
+RUN npm ci --omit=dev
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
