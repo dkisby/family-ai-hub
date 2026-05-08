@@ -79,7 +79,7 @@ module backendAcrPull './modules/acrPullRoleAssignment.bicep' = if (deployBacken
   name: 'backendAcrPull'
   params: {
     acrName: 'acrfamilyhub'
-    principalId: backendIdentity.outputs.principalId
+    principalId: backendIdentity.outputs.principalId!
   }
   dependsOn: [acr]
 }
@@ -110,7 +110,7 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
     acaEnvironmentName: acaEnvName
     acrName: 'acrfamilyhub'
     image: backendAPIImage
-    identityId: backendIdentity.outputs.identityId
+    identityId: backendIdentity.outputs.identityId!
     tenantId: tenantId
     foundryEndpoint: foundryResource.outputs.openaiEndpoint
     foundryApiKey: keyVaultRef.getSecret('foundry-api-key')
@@ -123,7 +123,7 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
 }
 
 @description('Backend API FQDN')
-output backendAPIFqdn string = deployBackendAPI ? backendAPI.outputs.containerAppFqdn : 'Not deployed'
+output backendAPIFqdn string = deployBackendAPI ? backendAPI.outputs.containerAppFqdn! : 'Not deployed'
 
 @description('Foundry endpoint')
 output foundryEndpoint string = foundryResource.outputs.openaiEndpoint

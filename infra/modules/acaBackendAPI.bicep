@@ -118,17 +118,6 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
       scale: {
         minReplicas: 1
         maxReplicas: 3
-        rules: [
-          {
-            name: 'cpu'
-            custom: {
-              metadata: {
-                type: 'cpu'
-                value: '80'
-              }
-            }
-          }
-        ]
       }
     }
   }
