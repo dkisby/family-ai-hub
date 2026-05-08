@@ -37,23 +37,11 @@ resource staticWebApp 'Microsoft.Web/staticSites@2022-03-01' = {
       skipGithubActionWorkflowGeneration: true
     }
     provider: 'GitHub'
-  }
-}
-
-// Configure static site settings
-resource staticWebAppConfig 'Microsoft.Web/staticSites/config@2022-03-01' = {
-  parent: staticWebApp
-  name: 'web'
-  properties: {
-    rewriteRules: [
-      {
-        source: '/*'
-        destination: '/index.html'
-      }
-    ]
+    linkedBackends: []
   }
 }
 
 output staticSiteId string = staticWebApp.id
 output defaultHostname string = staticWebApp.properties.defaultHostname
 output staticSiteName string = staticWebApp.name
+output repositoryUrl string = repositoryUrl

@@ -179,7 +179,7 @@ module backendAcrPull './modules/acrPullRoleAssignment.bicep' = if (deployBacken
   name: 'backendAcrPull'
   params: {
     acrName: 'acrfamilyhub'
-    principalId: backendIdentity.outputs.principalId
+    principalId: deployBackendAPI ? backendIdentity.outputs.principalId : ''
   }
   dependsOn: [acr]
 }
@@ -267,7 +267,7 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
     acaEnvironmentName: acaEnvName
     acrName: 'acrfamilyhub'
     image: backendAPIImage
-    identityId: backendIdentity.outputs.identityId
+    identityId: deployBackendAPI ? backendIdentity.outputs.identityId : ''
     tenantId: tenantId
     foundryEndpoint: foundryResource.outputs.openaiEndpoint
     foundryApiKey: keyVaultRef.getSecret('foundry-api-key')
@@ -284,16 +284,16 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
 // ============================================================
 
 @description('Static Web App hostname (React Frontend)')
-output staticWebAppHostname string = deployReactFrontend ? staticWebApp.outputs.defaultHostname : ''
+output staticWebAppHostname string = deployReactFrontend ? staticWebApp.outputs.defaultHostname : 'Not deployed'
 
 @description('Backend API FQDN')
-output backendAPIFqdn string = deployBackendAPI ? backendAPI.outputs.containerAppFqdn : ''
+output backendAPIFqdn string = deployBackendAPI ? backendAPI.outputs.containerAppFqdn : 'Not deployed'
 
 @description('Foundry endpoint')
 output foundryEndpoint string = foundryResource.outputs.openaiEndpoint
 
 @description('Container Apps environment ID')
-output acaEnvironmentId string = acaEnv.outputs.id
+output acaEnvironmentId string = acaEnv.outputs.envId
 
 @description('Status: React frontend deployed')
 output frontendDeployed bool = deployReactFrontend

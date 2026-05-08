@@ -23,6 +23,7 @@ param tenantId string
 param foundryEndpoint string
 
 @description('Foundry API key from Key Vault')
+@secure()
 param foundryApiKey string
 
 @description('Container App environment resource group')
