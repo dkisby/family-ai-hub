@@ -5,9 +5,9 @@ WORKDIR /app
 
 COPY .npmrc package*.json ./
 
-RUN npm ci
+RUN npm ci --verbose || (echo "npm ci failed"; npm list; exit 1)
 
-RUN ls -la node_modules/@types/node || (echo "FAILED: @types/node not installed" && exit 1)
+RUN test -f node_modules/@types/node/package.json || (echo "ERROR: @types/node not installed"; ls -la node_modules/@types/ || echo "@types not found"; exit 1)
 
 COPY src ./src
 COPY tsconfig.json .
