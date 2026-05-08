@@ -11,122 +11,47 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Azure Login using OIDC
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Validate template (what-if)
-      run: |
-        az deployment group what-if \
-          --resource-group ${{ secrets.AZURE_RG }} \
-          --template-file infra/main.bicep \
-          --parameters infra/parameters/main.parameters.json \
-          --parameters foundryDefaultModel="gpt-4.1-mini" \
-          --parameters foundryModelVersion="2025-04-14" \
-          --parameters webuiAadClientId="${{ secrets.WEBUI_AAD_CLIENT_ID }}" \
-          --parameters webuiAadClientSecret="${{ secrets.WEBUI_AAD_CLIENT_SECRET }}" \
-          --parameters customDomainName="${{ vars.CUSTOM_DOMAIN_NAME }}" \
-          --parameters webuiAdminEmail="${{ secrets.WEBUI_ADMIN_EMAIL }}" \
-          --parameters deployWebUI=false
+      - name: Validate template (what-if)
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --template-file infra/main.bicep \
+            --parameters infra/parameters/main.parameters.json \
+            --parameters deployBackendAPI=true
 
-  deploy-infra-base:
+  deploy:
     runs-on: ubuntu-latest
     needs: validate
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Azure Login using OIDC
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Deploy base infrastructure (no WebUI)
-      run: |
-        az deployment group create \
-          --resource-group ${{ secrets.AZURE_RG }} \
-          --template-file infra/main.bicep \
-          --parameters infra/parameters/main.parameters.json \
-          --parameters foundryDefaultModel="gpt-4.1-mini" \
-          --parameters foundryModelVersion="2025-04-14" \
-          --parameters webuiAadClientId="${{ secrets.WEBUI_AAD_CLIENT_ID }}" \
-          --parameters webuiAadClientSecret="${{ secrets.WEBUI_AAD_CLIENT_SECRET }}" \
-          --parameters customDomainName="${{ vars.CUSTOM_DOMAIN_NAME }}" \
-          --parameters webuiAdminEmail="${{ secrets.WEBUI_ADMIN_EMAIL }}" \
-          --parameters deployWebUI=false
+      - name: Deploy infrastructure
+        run: |
+          az deployment group create \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --template-file infra/main.bicep \
+            --parameters infra/parameters/main.parameters.json \
+            --parameters deployBackendAPI=true
 
-  push-image:
-    runs-on: ubuntu-latest
-    needs: deploy-infra-base
-    steps:
-    - name: Azure Login using OIDC
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-    - name: Push OpenWebUI image to ACR
-      run: |
-        az acr import \
-          --name acrfamilyhub \
-          --source ghcr.io/open-webui/open-webui:main \
-          --image openwebui:latest \
-          --force
-
-  deploy-webui:
-    runs-on: ubuntu-latest
-    needs: push-image
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Azure Login using OIDC
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-    - name: 'Deploy WebUI (phase 1: custom hostname bootstrap)'
-      run: |
-        az deployment group create \
-          --resource-group ${{ secrets.AZURE_RG }} \
-          --template-file infra/main.bicep \
-          --parameters infra/parameters/main.parameters.json \
-          --parameters foundryDefaultModel="gpt-4.1-mini" \
-          --parameters foundryModelVersion="2025-04-14" \
-          --parameters webuiAadClientId="${{ secrets.WEBUI_AAD_CLIENT_ID }}" \
-          --parameters webuiAadClientSecret="${{ secrets.WEBUI_AAD_CLIENT_SECRET }}" \
-          --parameters customDomainName="${{ vars.CUSTOM_DOMAIN_NAME }}" \
-          --parameters webuiAdminEmail="${{ secrets.WEBUI_ADMIN_EMAIL }}" \
-          --parameters deployWebUI=true \
-          --parameters enableCustomDomainTls=false
-
-    - name: 'Deploy WebUI (phase 2: managed certificate + TLS binding)'
-      run: |
-        az deployment group create \
-          --resource-group ${{ secrets.AZURE_RG }} \
-          --template-file infra/main.bicep \
-          --parameters infra/parameters/main.parameters.json \
-          --parameters foundryDefaultModel="gpt-4.1-mini" \
-          --parameters foundryModelVersion="2025-04-14" \
-          --parameters webuiAadClientId="${{ secrets.WEBUI_AAD_CLIENT_ID }}" \
-          --parameters webuiAadClientSecret="${{ secrets.WEBUI_AAD_CLIENT_SECRET }}" \
-          --parameters customDomainName="${{ vars.CUSTOM_DOMAIN_NAME }}" \
-          --parameters webuiAdminEmail="${{ secrets.WEBUI_ADMIN_EMAIL }}" \
-          --parameters deployWebUI=true \
-          --parameters enableCustomDomainTls=true
-
-    - name: Run smoke test
-      run: |
-        chmod +x scripts/smoke-test.sh
-        bash scripts/smoke-test.sh ${{ secrets.AZURE_RG }}
+      - name: Show outputs
+        run: |
+          az deployment group show \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --name main \
+            --query properties.outputs
