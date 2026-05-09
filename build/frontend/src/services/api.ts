@@ -83,8 +83,6 @@ class APIClient {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
-
-        // Keep the last incomplete line in buffer
         buffer = lines[lines.length - 1];
 
         for (let i = 0; i < lines.length - 1; i++) {
@@ -96,7 +94,6 @@ class APIClient {
                 onChunk(json.delta);
               }
             } catch {
-              // Skip invalid JSON lines
             }
           }
         }

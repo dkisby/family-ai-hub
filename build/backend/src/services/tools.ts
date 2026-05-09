@@ -12,7 +12,6 @@ export class ToolService {
   }
 
   private registerBuiltInTools() {
-    // Example tool: Calculator
     this.register({
       name: "calculate",
       description:
@@ -40,15 +39,11 @@ export class ToolService {
         return result;
       },
     });
-
-    // Example tool: Get current time
     this.register({
       name: "get_time",
       description: "Get the current date and time",
       handler: async () => new Date().toISOString(),
     });
-
-    // Example tool: Search (stub)
     this.register({
       name: "search",
       description: "Search for information on the internet",

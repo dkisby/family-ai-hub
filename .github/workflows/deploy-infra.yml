@@ -1,11 +1,36 @@
 name: Deploy Infrastructure
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+      - '.github/workflows/deploy-infra.yml'
   workflow_dispatch:
+    inputs:
+      deployBackendAPI:
+        description: 'Deploy backend API resources'
+        required: true
+        default: true
+        type: boolean
+      deployFrontendUI:
+        description: 'Deploy frontend UI resources'
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   id-token: write
   contents: read
+
+concurrency:
+  group: deploy-infra-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DEPLOY_BACKEND_API: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deployBackendAPI || 'true' }}
+  DEPLOY_FRONTEND_UI: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deployFrontendUI || 'true' }}
 
 jobs:
   validate:
@@ -26,7 +51,7 @@ jobs:
             --resource-group ${{ secrets.AZURE_RG }} \
             --template-file infra/main.bicep \
             --parameters infra/parameters/main.parameters.json \
-            --parameters deployBackendAPI=true deployFrontendUI=true
+            --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI
 
   deploy:
     runs-on: ubuntu-latest
@@ -47,7 +72,7 @@ jobs:
             --resource-group ${{ secrets.AZURE_RG }} \
             --template-file infra/main.bicep \
             --parameters infra/parameters/main.parameters.json \
-            --parameters deployBackendAPI=true deployFrontendUI=true
+            --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI
 
       - name: Show outputs
         run: |

@@ -31,8 +31,6 @@ param acaEnvironmentResourceGroup string
 
 @description('Container App environment subscription')
 param acaEnvironmentSubscription string
-
-// Reference existing ACA environment
 resource acaEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
   scope: resourceGroup(acaEnvironmentSubscription, acaEnvironmentResourceGroup)
   name: acaEnvironmentName

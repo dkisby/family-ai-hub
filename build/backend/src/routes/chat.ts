@@ -15,8 +15,6 @@ interface ChatRequestBody {
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   systemPrompt?: string;
 }
-
-// Non-streaming chat endpoint
 router.post(
   "/api/chat",
   async (req: AuthRequest, res: Response) => {
@@ -43,8 +41,6 @@ router.post(
     }
   }
 );
-
-// Streaming chat endpoint
 router.post(
   "/api/chat/stream",
   async (req: AuthRequest, res: Response) => {

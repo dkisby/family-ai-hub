@@ -120,8 +120,6 @@ export class FoundryService {
 
       const stream = response.data;
       let buffer = "";
-
-      // Check if already iterable
       if (stream[Symbol.asyncIterator]) {
         console.log("Stream is already async iterable");
         for await (const chunk of stream) {
@@ -169,7 +167,6 @@ export class FoundryService {
                   yield content;
                 }
               } catch {
-                // Skip invalid JSON chunks
               }
             }
           }

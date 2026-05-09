@@ -93,8 +93,7 @@ module backendAcrPull './modules/acrPullRoleAssignment.bicep' = if (deployBacken
   name: 'backendAcrPull'
   params: {
     acrName: 'acrfamilyhub'
-    #disable-next-line BCP318
-    principalId: backendIdentity.outputs.principalId!
+    principalId: backendIdentity.outputs.principalId ?? ''
   }
   dependsOn: [acr]
 }
@@ -103,8 +102,7 @@ module frontendAcrPull './modules/acrPullRoleAssignment.bicep' = if (deployFront
   name: 'frontendAcrPull'
   params: {
     acrName: 'acrfamilyhub'
-    #disable-next-line BCP318
-    principalId: frontendIdentity.outputs.principalId!
+    principalId: frontendIdentity.outputs.principalId ?? ''
   }
   dependsOn: [acr]
 }
@@ -135,8 +133,7 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
     acaEnvironmentName: acaEnvName
     acrName: 'acrfamilyhub'
     image: backendAPIImage
-    #disable-next-line BCP318
-    identityId: backendIdentity.outputs.identityId!
+    identityId: backendIdentity.outputs.identityId ?? ''
     tenantId: tenantId
     foundryEndpoint: foundryResource.outputs.openaiEndpoint
     foundryApiKey: keyVaultRef.getSecret('foundry-api-key')
@@ -156,10 +153,9 @@ module frontendUI './modules/acaFrontendUI.bicep' = if (deployFrontendUI) {
     acaEnvironmentName: acaEnvName
     acrName: 'acrfamilyhub'
     image: frontendUIImage
-    #disable-next-line BCP318
-    identityId: frontendIdentity.outputs.identityId!
-    acaEnvironmentResourceGroup: resourceGroup().name
-    acaEnvironmentSubscription: subscription().subscriptionId
+    identityId: frontendIdentity.outputs.identityId ?? ''
+    customDomainName: 'hub.kisbyfamily.com'
+    enableCustomDomainTls: true
   }
   dependsOn: [
     frontendAcrPull, acaEnv
@@ -167,12 +163,10 @@ module frontendUI './modules/acaFrontendUI.bicep' = if (deployFrontendUI) {
 }
 
 @description('Backend API FQDN')
-#disable-next-line BCP318
-output backendAPIFqdn string = deployBackendAPI ? backendAPI.outputs.containerAppFqdn! : 'Not deployed'
+output backendAPIFqdn string = backendAPI.outputs.containerAppFqdn ?? 'Not deployed'
 
 @description('Frontend UI FQDN')
-#disable-next-line BCP318
-output frontendUIFqdn string = deployFrontendUI ? frontendUI.outputs.containerAppFqdn! : 'Not deployed'
+output frontendUIFqdn string = frontendUI.outputs.containerAppFqdn ?? 'Not deployed'
 
 @description('Foundry endpoint')
 output foundryEndpoint string = foundryResource.outputs.openaiEndpoint

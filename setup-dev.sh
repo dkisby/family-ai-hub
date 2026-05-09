@@ -1,20 +1,14 @@
 #!/bin/bash
-# Quick start script for Family Hub development
-# Sets up both frontend and backend for local development
 
 set -e
 
 echo "🚀 Family Hub - Local Development Setup"
 echo "========================================"
 echo ""
-
-# Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
-
-# Check Node.js version
 echo -e "${BLUE}Checking Node.js...${NC}"
 NODE_VERSION=$(node -v)
 echo "✓ Node.js $NODE_VERSION"
@@ -23,8 +17,6 @@ if ! command -v npm &> /dev/null; then
     echo "❌ npm not found. Please install Node.js"
     exit 1
 fi
-
-# Setup Frontend
 echo ""
 echo -e "${BLUE}Setting up Frontend...${NC}"
 cd build/frontend
@@ -43,8 +35,6 @@ if [ ! -f .env.local ]; then
 fi
 
 echo "✓ Frontend ready"
-
-# Setup Backend
 cd ../backend
 echo ""
 echo -e "${BLUE}Setting up Backend...${NC}"
@@ -63,8 +53,6 @@ if [ ! -f .env ]; then
 fi
 
 echo "✓ Backend ready"
-
-# Summary
 echo ""
 echo -e "${GREEN}✓ Setup complete!${NC}"
 echo ""

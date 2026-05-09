@@ -1,6 +1,4 @@
 #!/bin/bash
-# Promote WebUI admin user by email
-# Usage: ./scripts/promote-webui-admin.sh [email] [resource-group] [container-app]
 
 set -e
 
@@ -12,8 +10,6 @@ echo "Promoting WebUI admin: $ADMIN_EMAIL"
 echo "  Container App: $CONTAINER_APP"
 echo "  Resource Group: $RESOURCE_GROUP"
 echo ""
-
-# Build Python command as a single string (avoids stdin/tty issues)
 PYTHON_CMD='
 import sqlite3, time, sys
 admin_email = "'$ADMIN_EMAIL'"
@@ -24,8 +20,6 @@ for attempt in range(10):
     try:
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
-        
-        # Check current
         cur.execute("SELECT email, role FROM users WHERE email=?", (admin_email,))
         existing = cur.fetchone()
         
@@ -33,20 +27,14 @@ for attempt in range(10):
             print(f"  Before: {existing}")
         else:
             print(f"  User {admin_email} not yet in database")
-        
-        # Promote to admin
         cur.execute("UPDATE users SET role='\''admin'\'' WHERE email=?", (admin_email,))
         conn.commit()
         print(f"  Updated {cur.rowcount} user(s) to admin role")
-        
-        # Verify
         cur.execute("SELECT email, role FROM users WHERE email=?", (admin_email,))
         updated = cur.fetchone()
         
         if updated:
             print(f"  After:  {updated}")
-        
-        # Show all users
         cur.execute("SELECT email, role FROM users")
         print("\n  All users in database:")
         for row in cur.fetchall():
@@ -69,9 +57,6 @@ for attempt in range(10):
         traceback.print_exc()
         sys.exit(1)
 '
-
-# Execute directly in container without stdin redirection
-# -c passes code via command line argument instead of stdin
 az containerapp exec \
   --resource-group "$RESOURCE_GROUP" \
   --name "$CONTAINER_APP" \

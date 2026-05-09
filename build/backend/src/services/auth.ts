@@ -1,4 +1,5 @@
-import jwt from "jsonwebtoken";
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { loadEnv } from "../utils/env.js";
 
 export interface DecodedToken {
   oid: string;
@@ -7,29 +8,49 @@ export interface DecodedToken {
   email?: string;
 }
 
+const env = loadEnv();
+const issuer = `https://login.microsoftonline.com/${env.ENTRA_TENANT_ID}/v2.0`;
+const jwksUri = new URL(`${issuer}/discovery/v2.0/keys`);
+const jwks = createRemoteJWKSet(jwksUri);
+
+function buildAudiences(): string[] {
+  if (!env.ENTRA_CLIENT_ID) {
+    return [];
+  }
+
+  return [env.ENTRA_CLIENT_ID, `api://${env.ENTRA_CLIENT_ID}`];
+}
+
 export class AuthService {
-  /**
-   * Validate and decode a Bearer token
-   * In production, validate signature against Entra public keys
-   */
-  static validateToken(token: string): DecodedToken | null {
+  
+  static async validateToken(token: string): Promise<DecodedToken | null> {
     try {
-      // Remove "Bearer " prefix if present
       const cleanToken = token.replace(/^Bearer\s+/i, "");
 
-      // Decode without verification for now (DEVELOPMENT ONLY)
-      // In production, verify against Microsoft's public keys
-      const decoded = jwt.decode(cleanToken) as Record<string, any>;
+      const verifyOptions: {
+        issuer: string;
+        audience?: string[];
+      } = {
+        issuer,
+      };
+
+      const audiences = buildAudiences();
+      if (audiences.length > 0) {
+        verifyOptions.audience = audiences;
+      }
+
+      const { payload } = await jwtVerify(cleanToken, jwks, verifyOptions);
+      const decoded = payload as JWTPayload & Record<string, unknown>;
 
       if (!decoded || !decoded.oid) {
         return null;
       }
 
       return {
-        oid: decoded.oid,
-        upn: decoded.upn || decoded.unique_name || "",
-        name: decoded.name,
-        email: decoded.email,
+        oid: String(decoded.oid),
+        upn: String(decoded.upn || decoded.unique_name || ""),
+        name: decoded.name ? String(decoded.name) : undefined,
+        email: decoded.email ? String(decoded.email) : undefined,
       };
     } catch (error) {
       console.error("Token validation error:", error);
@@ -37,9 +58,7 @@ export class AuthService {
     }
   }
 
-  /**
-   * Extract Bearer token from Authorization header
-   */
+  
   static extractToken(authHeader?: string): string | null {
     if (!authHeader) {
       return null;

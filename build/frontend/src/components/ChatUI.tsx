@@ -13,13 +13,9 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  // Set auth token when component mounts or token changes
   useEffect(() => {
     apiClient.setAuthToken(authToken);
   }, [authToken]);
-
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -30,8 +26,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
     if (!input.trim() || loading) {
       return;
     }
-
-    // Add user message to UI immediately
     const userMessage: IChatMessage = {
       id: Date.now().toString(),
       role: "user",
@@ -45,7 +39,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
     setLoading(true);
 
     try {
-      // Create assistant message placeholder
       const assistantMessage: IChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -54,8 +47,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-
-      // Stream response
       let fullResponse = "";
       await apiClient.streamChatMessage(
         {
@@ -92,13 +83,11 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      {/* Header */}
       <div className="border-b border-gray-200 p-4">
         <h1 className="text-2xl font-bold text-gray-900">Chat</h1>
         <p className="text-sm text-gray-500">Powered by Foundry</p>
       </div>
 
-      {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
@@ -129,7 +118,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
                 {message.content}
               </p>
 
-              {/* Tool Calls Display */}
               {message.toolCalls && message.toolCalls.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-gray-300">
                   {message.toolCalls.map((tool) => (
@@ -173,7 +161,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <div className="border-t border-gray-200 p-4 bg-white">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <textarea

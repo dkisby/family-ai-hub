@@ -16,17 +16,36 @@ param image string
 @description('Resource ID of the user-assigned managed identity')
 param identityId string
 
-@description('Container App environment resource group')
-param acaEnvironmentResourceGroup string
+@description('Custom domain name for the Container App')
+param customDomainName string = 'hub.kisbyfamily.com'
 
-@description('Container App environment subscription')
-param acaEnvironmentSubscription string
-
-// Reference existing ACA environment
+@description('Enable TLS binding for the custom domain (requires hostname pre-registration in environment)')
+param enableCustomDomainTls bool = true
 resource acaEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
-  scope: resourceGroup(acaEnvironmentSubscription, acaEnvironmentResourceGroup)
   name: acaEnvironmentName
 }
+
+@description('Managed certificate for the custom domain')
+resource managedCert 'Microsoft.App/managedEnvironments/managedCertificates@2024-03-01' = if (enableCustomDomainTls) {
+  name: replace(customDomainName, '.', '-')
+  parent: acaEnvironment
+  location: location
+  properties: {
+    subjectName: customDomainName
+    domainControlValidation: 'CNAME'
+  }
+}
+
+var customDomainBinding = enableCustomDomainTls
+  ? {
+      name: customDomainName
+      certificateId: managedCert.id
+      bindingType: 'SniEnabled'
+    }
+  : {
+      name: customDomainName
+      bindingType: 'Disabled'
+    }
 
 resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: name
@@ -44,6 +63,9 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
         external: true
         targetPort: 80
         transport: 'auto'
+        customDomains: [
+          customDomainBinding
+        ]
       }
       registries: [
         {
@@ -103,3 +125,9 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
 
 @description('Frontend UI FQDN')
 output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
+
+@description('Frontend UI custom domain URL')
+output customDomainUrl string = 'https://${customDomainName}'
+
+@description('Container App default FQDN')
+output acaDefaultFqdn string = containerApp.properties.configuration.ingress.fqdn

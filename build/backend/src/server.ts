@@ -7,29 +7,41 @@ import { healthRouter } from "./routes/health.js";
 
 const env = loadEnv();
 const app: Express = express();
+const allowedOrigins = new Set(
+  [env.FRONTEND_ORIGIN, ...env.CORS_ALLOWED_ORIGINS].filter(Boolean)
+);
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
 
-// Middleware
-app.use(cors());
+      if (env.NODE_ENV !== "production") {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS origin not allowed"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type"],
+  })
+);
 app.use(express.json());
-
-// Health check (no auth required)
 app.use(healthRouter);
-
-// Auth middleware for all API routes
 app.use("/api", authMiddleware);
-
-// Routes
 app.use(chatRouter);
-
-// Error handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error("Error:", err);
   res.status(500).json({
     error: err.message || "Internal server error",
   });
 });
-
-// Start server
 const PORT = env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✓ Backend API running on http://localhost:${PORT}`);

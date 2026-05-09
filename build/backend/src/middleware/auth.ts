@@ -25,16 +25,22 @@ export function authMiddleware(
     return res.status(401).json({ error: "Invalid authorization header" });
   }
 
-  const decoded = AuthService.validateToken(token);
-  if (!decoded) {
-    return res.status(401).json({ error: "Invalid token" });
-  }
+  AuthService.validateToken(token)
+    .then((decoded) => {
+      if (!decoded) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
 
-  req.user = {
-    oid: decoded.oid,
-    email: decoded.email || decoded.upn,
-    name: decoded.name,
-  };
+      req.user = {
+        oid: decoded.oid,
+        email: decoded.email || decoded.upn,
+        name: decoded.name,
+      };
 
-  next();
+      return next();
+    })
+    .catch((error) => {
+      console.error("Authentication middleware error:", error);
+      return res.status(401).json({ error: "Invalid token" });
+    });
 }
