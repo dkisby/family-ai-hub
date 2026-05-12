@@ -27,6 +27,14 @@ export interface ChatResponse {
   toolCalls?: ToolCall[];
 }
 
+export interface PlantAssistantResult {
+  summary: string;
+  likelyIssue: string;
+  confidence: number;
+  actions: string[];
+  warningFlags: string[];
+}
+
 class APIClient {
   private client: AxiosInstance;
 
@@ -106,6 +114,21 @@ class APIClient {
   async getHealth(): Promise<{ status: "ok" }> {
     const response = await this.client.get("/health");
     return response.data;
+  }
+
+  async analyzePlantImage(
+    imageDataUrl: string,
+    notes?: string
+  ): Promise<PlantAssistantResult> {
+    const response = await this.client.post<{
+      tool: string;
+      result: PlantAssistantResult;
+    }>("/api/tools/plant-assistant/analyze", {
+      imageDataUrl,
+      notes,
+    });
+
+    return response.data.result;
   }
 }
 

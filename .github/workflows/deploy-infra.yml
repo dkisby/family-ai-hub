@@ -37,6 +37,9 @@ env:
   DEPLOY_BACKEND_API: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deployBackendAPI || 'true' }}
   DEPLOY_FRONTEND_UI: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deployFrontendUI || 'true' }}
   RUN_TWO_PHASE_FRONTEND_DOMAIN_DEPLOYMENT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runTwoPhaseFrontendDomainDeployment || 'true' }}
+  REGISTRY_URL: acrfamilyhub.azurecr.io
+  FRONTEND_IMAGE_NAME: frontend-family-hub
+  BACKEND_IMAGE_NAME: backend-family-hub
 
 jobs:
   validate:
@@ -83,13 +86,46 @@ jobs:
 
       - name: Deploy infrastructure
         run: |
+          retry_group_deploy() {
+            local args="$1"
+            local max_attempts=5
+            local attempt=1
+
+            while true; do
+              echo "Running deployment attempt ${attempt}/${max_attempts}"
+              set +e
+              output=$(eval "az deployment group create ${args}" 2>&1)
+              code=$?
+              set -e
+
+              if [[ $code -eq 0 ]]; then
+                echo "$output"
+                return 0
+              fi
+
+              echo "$output"
+              if echo "$output" | grep -q "ContainerAppOperationInProgress" && [[ $attempt -lt $max_attempts ]]; then
+                echo "Container App operation in progress; waiting 45s and retrying..."
+                sleep 45
+                attempt=$((attempt + 1))
+                continue
+              fi
+
+              echo "Deployment failed and is not retryable or max retries reached."
+              return $code
+            done
+          }
+
+          DEPLOY_ARGS="--resource-group ${{ secrets.AZURE_RG }} \
+            --template-file infra/main.bicep \
+            --parameters infra/parameters/main.parameters.json \
+            --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI \
+            backendAPIImage=$REGISTRY_URL/$BACKEND_IMAGE_NAME:latest \
+            frontendUIImage=$REGISTRY_URL/$FRONTEND_IMAGE_NAME:latest"
+
           if [[ "$RUN_TWO_PHASE_FRONTEND_DOMAIN_DEPLOYMENT" == "true" && "$DEPLOY_FRONTEND_UI" == "true" ]]; then
             echo "Phase 1: register custom hostname without TLS"
-            az deployment group create \
-              --resource-group ${{ secrets.AZURE_RG }} \
-              --template-file infra/main.bicep \
-              --parameters infra/parameters/main.parameters.json \
-              --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI enableFrontendCustomDomainTls=false
+            retry_group_deploy "$DEPLOY_ARGS enableFrontendCustomDomainTls=false"
 
             echo "Ensuring custom hostname exists on frontend container app"
             HOSTNAME_EXISTS=$(az containerapp hostname list \
@@ -127,11 +163,7 @@ jobs:
               attempt=$((attempt + 1))
             done
           else
-            az deployment group create \
-              --resource-group ${{ secrets.AZURE_RG }} \
-              --template-file infra/main.bicep \
-              --parameters infra/parameters/main.parameters.json \
-              --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI enableFrontendCustomDomainTls=false
+            retry_group_deploy "$DEPLOY_ARGS enableFrontendCustomDomainTls=false"
 
             if [[ "$DEPLOY_FRONTEND_UI" == "true" ]]; then
               HOSTNAME_EXISTS=$(az containerapp hostname list \

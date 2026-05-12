@@ -5,6 +5,7 @@ import { loadEnv } from "./utils/env.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { chatRouter } from "./routes/chat.js";
 import { healthRouter } from "./routes/health.js";
+import { toolsRouter } from "./routes/tools.js";
 
 const env = loadEnv();
 const app: Express = express();
@@ -39,7 +40,7 @@ app.use(
     allowedHeaders: ["Authorization", "Content-Type"],
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "8mb" }));
 app.use(healthRouter);
 app.use("/api", apiLimiter);
 app.use("/api", (req, res, next) => {
@@ -47,6 +48,7 @@ app.use("/api", (req, res, next) => {
   return authMiddleware(req, res, next);
 });
 app.use(chatRouter);
+app.use(toolsRouter);
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error("Error:", err);
   res.status(500).json({

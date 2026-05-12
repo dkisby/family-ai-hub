@@ -18,6 +18,14 @@ export interface FoundryResponse {
   };
 }
 
+export interface PlantAnalysis {
+  summary: string;
+  likelyIssue: string;
+  confidence: number;
+  actions: string[];
+  warningFlags: string[];
+}
+
 export class FoundryService {
   private client: AxiosInstance;
   private endpoint: string;
@@ -176,6 +184,83 @@ export class FoundryService {
       console.error("Foundry streaming error:", error);
       throw new Error(
         `Failed to stream from Foundry: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  async analyzePlantImage(
+    imageDataUrl: string,
+    notes?: string
+  ): Promise<PlantAnalysis> {
+    try {
+      const userText = notes?.trim()
+        ? `Analyze this plant image. Additional context from user: ${notes.trim()}`
+        : "Analyze this plant image.";
+
+      const response = await this.client.post<FoundryResponse>(
+        `/openai/deployments/${this.model}/chat/completions`,
+        {
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a careful plant assistant. Return only valid JSON with keys: summary (string), likelyIssue (string), confidence (number 0-1), actions (array of short strings), warningFlags (array of short strings). Do not include markdown.",
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: userText,
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageDataUrl,
+                  },
+                },
+              ],
+            },
+          ],
+          temperature: 0.2,
+          max_tokens: 1000,
+          response_format: {
+            type: "json_object",
+          },
+        },
+        {
+          params: {
+            "api-version": this.apiVersion,
+          },
+        }
+      );
+
+      const content = response.data.choices[0]?.message?.content || "{}";
+      const parsed = JSON.parse(content) as Partial<PlantAnalysis>;
+
+      return {
+        summary: typeof parsed.summary === "string" ? parsed.summary : "No summary provided.",
+        likelyIssue:
+          typeof parsed.likelyIssue === "string"
+            ? parsed.likelyIssue
+            : "Unknown",
+        confidence:
+          typeof parsed.confidence === "number"
+            ? Math.min(1, Math.max(0, parsed.confidence))
+            : 0.4,
+        actions: Array.isArray(parsed.actions)
+          ? parsed.actions.filter((item): item is string => typeof item === "string")
+          : [],
+        warningFlags: Array.isArray(parsed.warningFlags)
+          ? parsed.warningFlags.filter((item): item is string => typeof item === "string")
+          : [],
+      };
+    } catch (error) {
+      console.error("Plant analysis error:", error);
+      throw new Error(
+        `Failed to analyze plant image: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );

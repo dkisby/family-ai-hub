@@ -2,15 +2,15 @@
 
 set -e
 
-RG="$1"
-
-if [ -z "$RG" ]; then
-  echo "❌ ERROR: No resource group supplied."
-  echo "Usage: bash smoke-test.sh <resource-group-name>"
-  exit 1
-fi
+RG="${1:-rg-family-ai-hub}"
+FRONTEND_APP="${FRONTEND_APP:-frontend-family-hub}"
+ACA_ENV="${ACA_ENV:-env-family-hub}"
+CUSTOM_DOMAIN="${CUSTOM_DOMAIN:-hub.kisbyfamily.com}"
 
 echo "🔍 Running smoke test for resource group: $RG"
+echo "   Frontend app: $FRONTEND_APP"
+echo "   ACA environment: $ACA_ENV"
+echo "   Custom domain: $CUSTOM_DOMAIN"
 echo "---------------------------------------------"
 
 pass() { echo "   ✔ PASS: $1"; }
@@ -62,7 +62,6 @@ for ST in $STORAGE_ACCOUNTS; do
   fi
 done
 echo "5️⃣  Checking ACA environment identity..."
-ACA_ENV=$(az containerapp env list -g "$RG" --query "[0].name" -o tsv)
 ACA_IDENTITY=$(az containerapp env show -g "$RG" -n "$ACA_ENV" --query "identity.type" -o tsv)
 
 [[ "$ACA_IDENTITY" == "SystemAssigned" ]] && pass "ACA environment identity enabled" || fail "ACA environment identity missing"
@@ -72,8 +71,6 @@ SKIP_DIAGNOSTICS=(
   "log-family-hub"      # Is the diagnostics destination, not a source
   "stgfamilyhubcore"    # Storage accounts don't support diagnostic categories cleanly
   "stgfamilyhubdigest"  # Storage accounts don't support diagnostic categories cleanly
-  "webui-family-hub"    # Container Apps diagnostics not supported
-  "id-webui-family-hub" # Managed identities don't support diagnostic settings
   "managedCertificates" # Managed certificates don't support diagnostic settings
 )
 
@@ -103,23 +100,37 @@ for ID in $(az resource list -g "$RG" --query "[].id" -o tsv); do
     fail "Diagnostics missing for $BASENAME"
   fi
 done
-echo "7️⃣  Checking Container Apps..."
+echo "7️⃣  Checking current frontend and backend container apps..."
 
-check_resource "Microsoft.App/containerApps" "WebUI Container App"
+FRONTEND_EXISTS=$(az containerapp show -g "$RG" -n "$FRONTEND_APP" --query name -o tsv 2>/dev/null || true)
+[[ "$FRONTEND_EXISTS" == "$FRONTEND_APP" ]] && pass "Frontend container app exists" || fail "Frontend container app missing"
 
-WEBUI_NAME=$(az containerapp list -g "$RG" --query "[0].name" -o tsv)
-WEBUI_IDENTITY=$(az containerapp show -g "$RG" -n "$WEBUI_NAME" --query "identity.type" -o tsv)
-[[ "$WEBUI_IDENTITY" == "UserAssigned" ]] && pass "WebUI identity enabled" || fail "WebUI identity missing"
-WEBUI_INGRESS=$(az containerapp show -g "$RG" -n "$WEBUI_NAME" --query "properties.configuration.ingress.external" -o tsv)
-[[ "$WEBUI_INGRESS" == "true" ]] && pass "WebUI ingress is external" || fail "WebUI ingress is not external"
-WEBUI_AUTH=$(az containerapp auth show -g "$RG" -n "$WEBUI_NAME" --query "platform.enabled" -o tsv 2>/dev/null || echo "false")
-[[ "$WEBUI_AUTH" == "true" ]] && pass "WebUI auth enabled" || fail "WebUI auth not enabled"
-WEBUI_REGISTRY=$(az containerapp show -g "$RG" -n "$WEBUI_NAME" --query "properties.configuration.registries[0].identity" -o tsv)
-[[ -n "$WEBUI_REGISTRY" && "$WEBUI_REGISTRY" != "null" ]] && pass "WebUI pulling from ACR via managed identity" || fail "WebUI not using managed identity for ACR"
-IDENTITY_PRINCIPAL=$(az identity show --resource-group "$RG" --name "id-webui-family-hub" --query principalId -o tsv)
-ACR_ID=$(az acr show -n "$ACR_NAME" -g "$RG" --query "id" -o tsv)
-ACR_PULL_ROLE=$(az role assignment list --assignee "$IDENTITY_PRINCIPAL" --scope "$ACR_ID" --query "[?roleDefinitionName=='AcrPull'].roleDefinitionName" -o tsv)
-[[ "$ACR_PULL_ROLE" == "AcrPull" ]] && pass "WebUI has AcrPull role on ACR" || fail "WebUI missing AcrPull role on ACR"
+BACKEND_EXISTS=$(az containerapp show -g "$RG" -n "backend-family-hub" --query name -o tsv 2>/dev/null || true)
+[[ "$BACKEND_EXISTS" == "backend-family-hub" ]] && pass "Backend container app exists" || fail "Backend container app missing"
+
+echo "8️⃣  Checking frontend reachability..."
+FRONTEND_FQDN=$(az containerapp show -g "$RG" -n "$FRONTEND_APP" --query "properties.configuration.ingress.fqdn" -o tsv)
+FRONTEND_STATE=$(az containerapp show -g "$RG" -n "$FRONTEND_APP" --query "properties.runningStatus" -o tsv)
+[[ -n "$FRONTEND_FQDN" && "$FRONTEND_FQDN" != "null" ]] && pass "Frontend ingress FQDN exists: $FRONTEND_FQDN" || fail "Frontend ingress FQDN missing"
+[[ "$FRONTEND_STATE" == "Running" ]] && pass "Frontend app is running" || fail "Frontend app not running (status: $FRONTEND_STATE)"
+
+if curl -fsS -I "https://$FRONTEND_FQDN" >/dev/null; then
+  pass "Frontend default ACA URL reachable"
+else
+  fail "Frontend default ACA URL not reachable"
+fi
+
+HOSTNAME_BOUND=$(az containerapp hostname list -g "$RG" -n "$FRONTEND_APP" --query "[?name=='$CUSTOM_DOMAIN'] | length(@)" -o tsv)
+[[ "$HOSTNAME_BOUND" -ge 1 ]] && pass "Custom hostname bound to frontend app" || fail "Custom hostname NOT bound to frontend app"
+
+if dig +short "$CUSTOM_DOMAIN" | grep -q .; then
+  pass "Custom domain resolves in DNS"
+else
+  fail "Custom domain does not resolve"
+fi
+
+CERT_FOUND=$(az containerapp env certificate list -g "$RG" -n "$ACA_ENV" --query "[?contains(properties.subjectName, '$CUSTOM_DOMAIN')] | length(@)" -o tsv)
+[[ "$CERT_FOUND" -ge 1 ]] && pass "Managed certificate exists for custom domain" || fail "Managed certificate missing for custom domain"
 
 echo "---------------------------------------------"
 echo "🎉 ALL CHECKS PASSED — Infrastructure is healthy"
