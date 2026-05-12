@@ -1,12 +1,14 @@
 import { Router, Response } from "express";
 import { AuthRequest } from "../middleware/auth.js";
 import { FoundryService } from "../services/foundry.js";
+import { PlantAssistantService } from "../services/tools/plantAssistant.js";
 import { loadEnv } from "../utils/env.js";
 
 const env = loadEnv();
 const router = Router();
 
 const foundry = new FoundryService(env.FOUNDRY_ENDPOINT, env.FOUNDRY_API_KEY);
+const plantAssistant = new PlantAssistantService(foundry);
 
 interface PlantAnalyzeBody {
   imageDataUrl?: string;
@@ -25,7 +27,7 @@ router.post("/api/tools/plant-assistant/analyze", async (req: AuthRequest, res: 
       return res.status(400).json({ error: "imageDataUrl must be a valid data URL image" });
     }
 
-    const analysis = await foundry.analyzePlantImage(imageDataUrl, notes);
+    const analysis = await plantAssistant.analyzeImage(imageDataUrl, notes);
 
     return res.json({
       tool: "plant-assistant",
