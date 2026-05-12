@@ -1,0 +1,37 @@
+# Ignore all JSON files
+*.json
+
+# Allow infra parameter JSON files
+!infra/parameters/*.json
+
+# Allow tool JSON files
+!tools/*.json
+
+# Allow build package files
+!build/frontend/package.json
+!build/frontend/package-lock.json
+!build/backend/package.json
+!build/backend/package-lock.json
+
+# Allow build config files
+!build/frontend/tsconfig.json
+!build/frontend/tsconfig.node.json
+!build/backend/tsconfig.json
+
+# VS Code
+.vscode/
+
+# Python (future tools)
+__pycache__/
+*.pyc
+
+# Node (if you add JS tools later)
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db.azure/
+.azure/

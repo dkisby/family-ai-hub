@@ -1,0 +1,32 @@
+name: Deploy Tools to WebUI
+
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  CONTAINER_APP: webui-family-hub
+  WEBUI_URL: ${{ secrets.WEBUI_URL }}
+
+jobs:
+  deploy-tools:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Deploy tools via WebUI API
+      run: |
+        set -euo pipefail
+        shopt -s nullglob
+
+        for file in tools/*.json; do
+          echo "Deploying tool: $file"
+
+          curl -X POST "https://${{ vars.CUSTOM_DOMAIN_NAME }}/api/tools" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WEBUI_API_KEY }}" \
+            -d @"$file" \
+            || echo "Tool may already exist — continuing"
+        done
