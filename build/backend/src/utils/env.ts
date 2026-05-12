@@ -42,7 +42,7 @@ export function loadEnv(): Environment {
   const required = ["FOUNDRY_ENDPOINT", "FOUNDRY_API_KEY", "ENTRA_TENANT_ID"];
 
   if (env.NODE_ENV === "production") {
-    required.push("ENTRA_CLIENT_ID", "ENTRA_API_CLIENT_ID");
+    required.push("ENTRA_API_CLIENT_ID");
   }
 
   for (const key of required) {

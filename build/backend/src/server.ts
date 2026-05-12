@@ -40,7 +40,7 @@ app.use(
     allowedHeaders: ["Authorization", "Content-Type"],
   })
 );
-app.use(express.json({ limit: "8mb" }));
+app.use(express.json({ limit: "12mb" }));
 app.use(healthRouter);
 app.use("/api", apiLimiter);
 app.use("/api", (req, res, next) => {
@@ -51,6 +51,13 @@ app.use(chatRouter);
 app.use(toolsRouter);
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error("Error:", err);
+
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({
+      error: "Uploaded image is too large. Please use a smaller image.",
+    });
+  }
+
   res.status(500).json({
     error: err.message || "Internal server error",
   });

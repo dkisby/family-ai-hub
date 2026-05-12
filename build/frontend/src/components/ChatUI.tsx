@@ -89,13 +89,46 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
     }
   };
 
-  const fileToDataUrl = (file: File) =>
-    new Promise<string>((resolve, reject) => {
+  const fileToDataUrl = async (file: File): Promise<string> => {
+    const original = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result || ""));
       reader.onerror = () => reject(new Error("Could not read file"));
       reader.readAsDataURL(file);
     });
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Could not decode image"));
+      image.src = original;
+    });
+
+    const maxSize = 1600;
+    const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+    const width = Math.max(1, Math.round(img.width * scale));
+    const height = Math.max(1, Math.round(img.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Could not process image");
+    }
+
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // Start with high quality and reduce until payload is reasonably small.
+    let quality = 0.9;
+    let output = canvas.toDataURL("image/jpeg", quality);
+    while (output.length > 6_500_000 && quality > 0.45) {
+      quality -= 0.1;
+      output = canvas.toDataURL("image/jpeg", quality);
+    }
+
+    return output;
+  };
 
   const handleAnalyzePlant = async () => {
     if (!toolFile || toolLoading) {

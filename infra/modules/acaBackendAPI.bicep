@@ -19,6 +19,15 @@ param identityId string
 @description('Entra tenant ID')
 param tenantId string
 
+@description('Entra SPA app client ID')
+param entraClientId string
+
+@description('Entra API app client ID')
+param entraApiClientId string
+
+@description('Allowed frontend origin for CORS')
+param frontendOrigin string
+
 @description('Foundry endpoint')
 param foundryEndpoint string
 
@@ -85,6 +94,18 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'ENTRA_TENANT_ID'
               value: tenantId
+            }
+            {
+              name: 'ENTRA_CLIENT_ID'
+              value: entraClientId
+            }
+            {
+              name: 'ENTRA_API_CLIENT_ID'
+              value: entraApiClientId
+            }
+            {
+              name: 'FRONTEND_ORIGIN'
+              value: frontendOrigin
             }
             {
               name: 'NODE_ENV'

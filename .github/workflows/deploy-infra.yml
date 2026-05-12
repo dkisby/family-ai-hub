@@ -120,6 +120,9 @@ jobs:
             --template-file infra/main.bicep \
             --parameters infra/parameters/main.parameters.json \
             --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI \
+            entraClientId=${{ secrets.ENTRA_CLIENT_ID }} \
+            entraApiClientId=${{ secrets.ENTRA_API_CLIENT_ID }} \
+            frontendOrigin=https://hub.kisbyfamily.com \
             backendAPIImage=$REGISTRY_URL/$BACKEND_IMAGE_NAME:latest \
             frontendUIImage=$REGISTRY_URL/$FRONTEND_IMAGE_NAME:latest"
 

@@ -18,6 +18,15 @@ param foundryDefaultModel string = 'gpt-4.1-mini'
 @description('Foundry model version')
 param foundryModelVersion string = '2025-04-14'
 
+@description('Entra SPA app client ID')
+param entraClientId string = ''
+
+@description('Entra API app client ID')
+param entraApiClientId string = ''
+
+@description('Frontend origin allowed for backend CORS')
+param frontendOrigin string = 'https://hub.kisbyfamily.com'
+
 @description('Enable TLS binding for frontend custom domain. Use false for first run to register hostname, then true to issue and bind managed cert.')
 param enableFrontendCustomDomainTls bool = false
 
@@ -138,6 +147,9 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
     image: backendAPIImage
     identityId: backendIdentity.outputs.identityId ?? ''
     tenantId: tenantId
+    entraClientId: entraClientId
+    entraApiClientId: entraApiClientId
+    frontendOrigin: frontendOrigin
     foundryEndpoint: foundryResource.outputs.openaiEndpoint
     foundryApiKey: keyVaultRef.getSecret('foundry-api-key')
     acaEnvironmentResourceGroup: resourceGroup().name
