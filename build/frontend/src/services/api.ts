@@ -35,6 +35,14 @@ export interface PlantAssistantResult {
   warningFlags: string[];
 }
 
+export interface MinecraftAssistantResult {
+  answer: string;
+  steps: string[];
+  materials: string[];
+  commands: string[];
+  notes: string;
+}
+
 class APIClient {
   private client: AxiosInstance;
 
@@ -126,6 +134,23 @@ class APIClient {
     }>("/api/tools/plant-assistant/analyze", {
       imageDataUrl,
       notes,
+    });
+
+    return response.data.result;
+  }
+
+  async askMinecraft(
+    question: string,
+    edition: "java" | "bedrock" | "auto-detect" = "auto-detect",
+    detailLevel: "simple" | "normal" | "advanced" = "normal"
+  ): Promise<MinecraftAssistantResult> {
+    const response = await this.client.post<{
+      tool: string;
+      result: MinecraftAssistantResult;
+    }>("/api/tools/minecraft-assistant/ask", {
+      question,
+      edition,
+      detail_level: detailLevel,
     });
 
     return response.data.result;

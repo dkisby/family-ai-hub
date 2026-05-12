@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   ChatMessage as IChatMessage,
   PlantAssistantResult,
+  MinecraftAssistantResult,
 } from "../services/api";
 import { apiClient } from "../services/api";
 
@@ -17,6 +18,12 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
   const [toolLoading, setToolLoading] = useState(false);
   const [toolError, setToolError] = useState<string | null>(null);
   const [toolResult, setToolResult] = useState<PlantAssistantResult | null>(null);
+  const [minecraftQuestion, setMinecraftQuestion] = useState("");
+  const [minecraftEdition, setMinecraftEdition] = useState<"java" | "bedrock" | "auto-detect">("auto-detect");
+  const [minecraftDetail, setMinecraftDetail] = useState<"simple" | "normal" | "advanced">("normal");
+  const [minecraftLoading, setMinecraftLoading] = useState(false);
+  const [minecraftError, setMinecraftError] = useState<string | null>(null);
+  const [minecraftResult, setMinecraftResult] = useState<MinecraftAssistantResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -150,6 +157,25 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
     }
   };
 
+  const handleAskMinecraft = async () => {
+    if (!minecraftQuestion.trim() || minecraftLoading) {
+      return;
+    }
+
+    setMinecraftLoading(true);
+    setMinecraftError(null);
+    setMinecraftResult(null);
+
+    try {
+      const result = await apiClient.askMinecraft(minecraftQuestion, minecraftEdition, minecraftDetail);
+      setMinecraftResult(result);
+    } catch (err) {
+      setMinecraftError(err instanceof Error ? err.message : "Minecraft assistant failed");
+    } finally {
+      setMinecraftLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-white">
       <div className="border-b border-gray-200 p-4">
@@ -212,6 +238,114 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
                   ))}
                 </ul>
               </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-b border-gray-200 bg-blue-50 p-4">
+        <h2 className="text-base font-semibold text-gray-900">⛏️ Minecraft Assistant Tool</h2>
+        <p className="text-sm text-gray-600 mb-3">
+          Ask questions about Minecraft crafting, building, redstone, commands, and survival tips.
+        </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col md:flex-row gap-2 md:items-end">
+            <div className="flex-1">
+              <label className="text-xs font-semibold text-gray-700 block mb-1">Edition</label>
+              <select
+                value={minecraftEdition}
+                onChange={(e) => setMinecraftEdition(e.target.value as any)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="auto-detect">Auto-detect</option>
+                <option value="java">Java Edition</option>
+                <option value="bedrock">Bedrock Edition</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-xs font-semibold text-gray-700 block mb-1">Detail Level</label>
+              <select
+                value={minecraftDetail}
+                onChange={(e) => setMinecraftDetail(e.target.value as any)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="simple">Simple (like I'm 7)</option>
+                <option value="normal">Normal</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row gap-2 md:items-center">
+            <input
+              type="text"
+              value={minecraftQuestion}
+              onChange={(e) => setMinecraftQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !minecraftLoading) {
+                  handleAskMinecraft();
+                }
+              }}
+              placeholder="e.g. How do I build a piston door? What's the crafting recipe for a brewing stand?"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <button
+              type="button"
+              onClick={handleAskMinecraft}
+              disabled={!minecraftQuestion.trim() || minecraftLoading}
+              className="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              {minecraftLoading ? "Thinking..." : "Ask"}
+            </button>
+          </div>
+        </div>
+
+        {minecraftError && (
+          <div className="mt-3 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">
+            {minecraftError}
+          </div>
+        )}
+
+        {minecraftResult && (
+          <div className="mt-3 text-sm bg-white border border-blue-200 rounded-lg p-3 space-y-2">
+            <div>
+              <p className="font-semibold text-gray-900">Answer:</p>
+              <p className="text-gray-800">{minecraftResult.answer}</p>
+            </div>
+            {minecraftResult.steps.length > 0 && (
+              <div>
+                <p className="font-semibold text-gray-900">Steps:</p>
+                <ol className="list-decimal ml-5 text-gray-800 space-y-1">
+                  {minecraftResult.steps.map((step, idx) => (
+                    <li key={`${step}-${idx}`}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {minecraftResult.materials.length > 0 && (
+              <div>
+                <p className="font-semibold text-gray-900">Materials:</p>
+                <ul className="list-disc ml-5 text-gray-800">
+                  {minecraftResult.materials.map((material, idx) => (
+                    <li key={`${material}-${idx}`}>{material}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {minecraftResult.commands.length > 0 && (
+              <div>
+                <p className="font-semibold text-gray-900">Commands:</p>
+                <ul className="list-disc ml-5 text-gray-700 bg-gray-900 text-green-400 p-2 rounded font-mono text-xs">
+                  {minecraftResult.commands.map((command, idx) => (
+                    <li key={`${command}-${idx}`}>{command}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {minecraftResult.notes && (
+              <div>
+                <p className="font-semibold text-gray-900">Notes:</p>
+                <p className="text-gray-700 italic">{minecraftResult.notes}</p>
+              </div>
             )}
           </div>
         )}
