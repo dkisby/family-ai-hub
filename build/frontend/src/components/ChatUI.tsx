@@ -10,6 +10,8 @@ interface ChatUIProps {
   authToken: string;
 }
 
+type ToolTab = "plant" | "minecraft";
+
 export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
   const [messages, setMessages] = useState<IChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -24,6 +26,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
   const [minecraftLoading, setMinecraftLoading] = useState(false);
   const [minecraftError, setMinecraftError] = useState<string | null>(null);
   const [minecraftResult, setMinecraftResult] = useState<MinecraftAssistantResult | null>(null);
+  const [activeToolTab, setActiveToolTab] = useState<ToolTab>("plant");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -177,178 +180,222 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      <div className="border-b border-gray-200 p-4">
+    <div className="flex flex-col h-screen bg-slate-50/80 backdrop-blur-sm">
+      <div className="border-b border-gray-200/80 bg-white/85 p-4">
         <h1 className="text-2xl font-bold text-gray-900">Chat</h1>
         <p className="text-sm text-gray-500">Powered by Foundry</p>
       </div>
 
-      <div className="border-b border-gray-200 bg-green-50 p-4">
-        <h2 className="text-base font-semibold text-gray-900">Plant Assistant Tool</h2>
-        <p className="text-sm text-gray-600 mb-3">
-          Upload a plant image to get a structured diagnosis from your backend tool route.
-        </p>
-        <div className="flex flex-col md:flex-row gap-2 md:items-center">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setToolFile(e.target.files?.[0] ?? null)}
-            className="text-sm"
-          />
-          <input
-            type="text"
-            value={toolNotes}
-            onChange={(e) => setToolNotes(e.target.value)}
-            placeholder="Optional notes (e.g. yellow leaves for 3 days)"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-          />
-          <button
-            type="button"
-            onClick={handleAnalyzePlant}
-            disabled={!toolFile || toolLoading}
-            className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-          >
-            {toolLoading ? "Analyzing..." : "Analyze Plant"}
-          </button>
-        </div>
-
-        {toolError && (
-          <div className="mt-3 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">
-            {toolError}
+      <div className="border-b border-gray-200/80 bg-white/80 p-3">
+        <div className="mx-auto max-w-5xl rounded-xl border border-slate-200 bg-slate-50/90 p-3 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Tools</h2>
+            <span className="text-xs text-slate-500">Open one tool at a time</span>
           </div>
-        )}
 
-        {toolResult && (
-          <div className="mt-3 text-sm bg-white border border-green-200 rounded-lg p-3">
-            <p><span className="font-semibold">Summary:</span> {toolResult.summary}</p>
-            <p><span className="font-semibold">Likely issue:</span> {toolResult.likelyIssue}</p>
-            <p><span className="font-semibold">Confidence:</span> {Math.round(toolResult.confidence * 100)}%</p>
-            <p className="font-semibold mt-2">Actions:</p>
-            <ul className="list-disc ml-5">
-              {toolResult.actions.map((action, idx) => (
-                <li key={`${action}-${idx}`}>{action}</li>
-              ))}
-            </ul>
-            {toolResult.warningFlags.length > 0 && (
-              <>
-                <p className="font-semibold mt-2">Warning flags:</p>
-                <ul className="list-disc ml-5 text-amber-700">
-                  {toolResult.warningFlags.map((flag, idx) => (
-                    <li key={`${flag}-${idx}`}>{flag}</li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="border-b border-gray-200 bg-blue-50 p-4">
-        <h2 className="text-base font-semibold text-gray-900">⛏️ Minecraft Assistant Tool</h2>
-        <p className="text-sm text-gray-600 mb-3">
-          Ask questions about Minecraft crafting, building, redstone, commands, and survival tips.
-        </p>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col md:flex-row gap-2 md:items-end">
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-700 block mb-1">Edition</label>
-              <select
-                value={minecraftEdition}
-                onChange={(e) => setMinecraftEdition(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="auto-detect">Auto-detect</option>
-                <option value="java">Java Edition</option>
-                <option value="bedrock">Bedrock Edition</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-700 block mb-1">Detail Level</label>
-              <select
-                value={minecraftDetail}
-                onChange={(e) => setMinecraftDetail(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="simple">Simple (like I'm 7)</option>
-                <option value="normal">Normal</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex flex-col md:flex-row gap-2 md:items-center">
-            <input
-              type="text"
-              value={minecraftQuestion}
-              onChange={(e) => setMinecraftQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !minecraftLoading) {
-                  handleAskMinecraft();
-                }
-              }}
-              placeholder="e.g. How do I build a piston door? What's the crafting recipe for a brewing stand?"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
+          <div className="mb-3 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={handleAskMinecraft}
-              disabled={!minecraftQuestion.trim() || minecraftLoading}
-              className="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              onClick={() => setActiveToolTab("plant")}
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
+                activeToolTab === "plant"
+                  ? "bg-emerald-700 text-white"
+                  : "bg-white text-slate-700 hover:bg-emerald-100"
+              }`}
             >
-              {minecraftLoading ? "Thinking..." : "Ask"}
+              Plant Assistant
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveToolTab("minecraft")}
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
+                activeToolTab === "minecraft"
+                  ? "bg-blue-700 text-white"
+                  : "bg-white text-slate-700 hover:bg-blue-100"
+              }`}
+            >
+              Minecraft Assistant
             </button>
           </div>
-        </div>
 
-        {minecraftError && (
-          <div className="mt-3 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">
-            {minecraftError}
-          </div>
-        )}
+          {activeToolTab === "plant" && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <p className="text-sm text-slate-700 mb-2">
+                Upload one plant photo for quick diagnosis.
+              </p>
+              <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setToolFile(e.target.files?.[0] ?? null)}
+                  className="text-sm"
+                />
+                <input
+                  type="text"
+                  value={toolNotes}
+                  onChange={(e) => setToolNotes(e.target.value)}
+                  placeholder="Optional notes (e.g. yellow leaves for 3 days)"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleAnalyzePlant}
+                  disabled={!toolFile || toolLoading}
+                  className="px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  {toolLoading ? "Analyzing..." : "Analyze"}
+                </button>
+              </div>
 
-        {minecraftResult && (
-          <div className="mt-3 text-sm bg-white border border-blue-200 rounded-lg p-3 space-y-2">
-            <div>
-              <p className="font-semibold text-gray-900">Answer:</p>
-              <p className="text-gray-800">{minecraftResult.answer}</p>
+              {toolError && (
+                <div className="mt-3 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">
+                  {toolError}
+                </div>
+              )}
+
+              {toolResult && (
+                <div className="mt-3 text-sm bg-white border border-emerald-200 rounded-lg p-3">
+                  <p><span className="font-semibold">Summary:</span> {toolResult.summary}</p>
+                  <p><span className="font-semibold">Likely issue:</span> {toolResult.likelyIssue}</p>
+                  <p><span className="font-semibold">Confidence:</span> {Math.round(toolResult.confidence * 100)}%</p>
+                  <p className="font-semibold mt-2">Actions:</p>
+                  <ul className="list-disc ml-5">
+                    {toolResult.actions.map((action, idx) => (
+                      <li key={`${action}-${idx}`}>{action}</li>
+                    ))}
+                  </ul>
+                  {toolResult.warningFlags.length > 0 && (
+                    <>
+                      <p className="font-semibold mt-2">Warning flags:</p>
+                      <ul className="list-disc ml-5 text-amber-700">
+                        {toolResult.warningFlags.map((flag, idx) => (
+                          <li key={`${flag}-${idx}`}>{flag}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-            {minecraftResult.steps.length > 0 && (
-              <div>
-                <p className="font-semibold text-gray-900">Steps:</p>
-                <ol className="list-decimal ml-5 text-gray-800 space-y-1">
-                  {minecraftResult.steps.map((step, idx) => (
-                    <li key={`${step}-${idx}`}>{step}</li>
-                  ))}
-                </ol>
+          )}
+
+          {activeToolTab === "minecraft" && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <p className="text-sm text-slate-700 mb-2">
+                Ask about crafting, redstone, builds, commands, and survival tips.
+              </p>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col md:flex-row gap-2 md:items-end">
+                  <div className="flex-1">
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">Edition</label>
+                    <select
+                      value={minecraftEdition}
+                      onChange={(e) =>
+                        setMinecraftEdition(
+                          e.target.value as "java" | "bedrock" | "auto-detect"
+                        )
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="auto-detect">Auto-detect</option>
+                      <option value="java">Java Edition</option>
+                      <option value="bedrock">Bedrock Edition</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">Detail Level</label>
+                    <select
+                      value={minecraftDetail}
+                      onChange={(e) =>
+                        setMinecraftDetail(
+                          e.target.value as "simple" | "normal" | "advanced"
+                        )
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="simple">Simple (like I'm 7)</option>
+                      <option value="normal">Normal</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                  <input
+                    type="text"
+                    value={minecraftQuestion}
+                    onChange={(e) => setMinecraftQuestion(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !minecraftLoading) {
+                        handleAskMinecraft();
+                      }
+                    }}
+                    placeholder="e.g. How do I build a piston door?"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAskMinecraft}
+                    disabled={!minecraftQuestion.trim() || minecraftLoading}
+                    className="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {minecraftLoading ? "Thinking..." : "Ask"}
+                  </button>
+                </div>
               </div>
-            )}
-            {minecraftResult.materials.length > 0 && (
-              <div>
-                <p className="font-semibold text-gray-900">Materials:</p>
-                <ul className="list-disc ml-5 text-gray-800">
-                  {minecraftResult.materials.map((material, idx) => (
-                    <li key={`${material}-${idx}`}>{material}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {minecraftResult.commands.length > 0 && (
-              <div>
-                <p className="font-semibold text-gray-900">Commands:</p>
-                <ul className="list-disc ml-5 text-gray-700 bg-gray-900 text-green-400 p-2 rounded font-mono text-xs">
-                  {minecraftResult.commands.map((command, idx) => (
-                    <li key={`${command}-${idx}`}>{command}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {minecraftResult.notes && (
-              <div>
-                <p className="font-semibold text-gray-900">Notes:</p>
-                <p className="text-gray-700 italic">{minecraftResult.notes}</p>
-              </div>
-            )}
-          </div>
-        )}
+
+              {minecraftError && (
+                <div className="mt-3 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">
+                  {minecraftError}
+                </div>
+              )}
+
+              {minecraftResult && (
+                <div className="mt-3 text-sm bg-white border border-blue-200 rounded-lg p-3 space-y-2">
+                  <div>
+                    <p className="font-semibold text-gray-900">Answer:</p>
+                    <p className="text-gray-800">{minecraftResult.answer}</p>
+                  </div>
+                  {minecraftResult.steps.length > 0 && (
+                    <div>
+                      <p className="font-semibold text-gray-900">Steps:</p>
+                      <ol className="list-decimal ml-5 text-gray-800 space-y-1">
+                        {minecraftResult.steps.map((step, idx) => (
+                          <li key={`${step}-${idx}`}>{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {minecraftResult.materials.length > 0 && (
+                    <div>
+                      <p className="font-semibold text-gray-900">Materials:</p>
+                      <ul className="list-disc ml-5 text-gray-800">
+                        {minecraftResult.materials.map((material, idx) => (
+                          <li key={`${material}-${idx}`}>{material}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {minecraftResult.commands.length > 0 && (
+                    <div>
+                      <p className="font-semibold text-gray-900">Commands:</p>
+                      <ul className="list-disc ml-5 text-gray-700 bg-gray-900 text-green-400 p-2 rounded font-mono text-xs">
+                        {minecraftResult.commands.map((command, idx) => (
+                          <li key={`${command}-${idx}`}>{command}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {minecraftResult.notes && (
+                    <div>
+                      <p className="font-semibold text-gray-900">Notes:</p>
+                      <p className="text-gray-700 italic">{minecraftResult.notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -424,7 +471,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-gray-200 p-4 bg-white">
+      <div className="border-t border-gray-200/80 p-4 bg-white/90">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <textarea
             ref={inputRef}
