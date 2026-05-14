@@ -79,7 +79,7 @@ function AuthenticatedApp() {
     );
   }
 
-  return <ChatUI authToken={token} />;
+  return <ChatUI authToken={token} preferenceKey={account?.homeAccountId || "anonymous"} />;
 }
 
 function AppContent() {

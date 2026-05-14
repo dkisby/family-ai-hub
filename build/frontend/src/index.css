@@ -4,7 +4,7 @@
 
 :root {
   --app-bg-gradient: linear-gradient(140deg, #f0f7ff 0%, #f6fbf3 55%, #fff7e6 100%);
-  --app-bg-image: : url('retrobackground.png');
+  --app-bg-image: url('/retrobackground.png');
   --app-bg-overlay: rgba(255, 255, 255, 0.72);
 }
 

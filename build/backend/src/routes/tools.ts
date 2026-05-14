@@ -46,18 +46,17 @@ router.post("/api/tools/plant-assistant/analyze", async (req: AuthRequest, res: 
 interface MinecraftAskBody {
   question?: string;
   edition?: "java" | "bedrock" | "auto-detect";
-  detail_level?: "simple" | "normal" | "advanced";
 }
 
 router.post("/api/tools/minecraft-assistant/ask", async (req: AuthRequest, res: Response) => {
   try {
-    const { question, edition = "auto-detect", detail_level = "normal" } = req.body as MinecraftAskBody;
+    const { question, edition = "auto-detect" } = req.body as MinecraftAskBody;
 
     if (!question || typeof question !== "string") {
       return res.status(400).json({ error: "question is required" });
     }
 
-    const response = await minecraftAssistant.askMinecraft(question, edition, detail_level);
+    const response = await minecraftAssistant.askMinecraft(question, edition);
 
     return res.json({
       tool: "minecraft-assistant",

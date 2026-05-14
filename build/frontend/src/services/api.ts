@@ -141,8 +141,7 @@ class APIClient {
 
   async askMinecraft(
     question: string,
-    edition: "java" | "bedrock" | "auto-detect" = "auto-detect",
-    detailLevel: "simple" | "normal" | "advanced" = "normal"
+    edition: "java" | "bedrock" | "auto-detect" = "auto-detect"
   ): Promise<MinecraftAssistantResult> {
     const response = await this.client.post<{
       tool: string;
@@ -150,7 +149,6 @@ class APIClient {
     }>("/api/tools/minecraft-assistant/ask", {
       question,
       edition,
-      detail_level: detailLevel,
     });
 
     return response.data.result;

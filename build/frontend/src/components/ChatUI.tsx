@@ -8,11 +8,12 @@ import { apiClient } from "../services/api";
 
 interface ChatUIProps {
   authToken: string;
+  preferenceKey: string;
 }
 
 type ToolTab = "plant" | "minecraft";
 
-export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
+export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
   const [messages, setMessages] = useState<IChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [toolNotes, setToolNotes] = useState("");
@@ -21,8 +22,8 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
   const [toolError, setToolError] = useState<string | null>(null);
   const [toolResult, setToolResult] = useState<PlantAssistantResult | null>(null);
   const [minecraftQuestion, setMinecraftQuestion] = useState("");
-  const [minecraftEdition, setMinecraftEdition] = useState<"java" | "bedrock" | "auto-detect">("auto-detect");
-  const [minecraftDetail, setMinecraftDetail] = useState<"simple" | "normal" | "advanced">("normal");
+  const [preferredEdition, setPreferredEdition] = useState<"java" | "bedrock">("bedrock");
+  const [editionMode, setEditionMode] = useState<"preferred" | "auto-detect">("preferred");
   const [minecraftLoading, setMinecraftLoading] = useState(false);
   const [minecraftError, setMinecraftError] = useState<string | null>(null);
   const [minecraftResult, setMinecraftResult] = useState<MinecraftAssistantResult | null>(null);
@@ -34,6 +35,20 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
   useEffect(() => {
     apiClient.setAuthToken(authToken);
   }, [authToken]);
+
+  useEffect(() => {
+    const key = `familyHub.minecraft.preferredEdition.${preferenceKey}`;
+    const saved = window.localStorage.getItem(key);
+    if (saved === "java" || saved === "bedrock") {
+      setPreferredEdition(saved);
+    }
+  }, [preferenceKey]);
+
+  useEffect(() => {
+    const key = `familyHub.minecraft.preferredEdition.${preferenceKey}`;
+    window.localStorage.setItem(key, preferredEdition);
+  }, [preferenceKey, preferredEdition]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -170,7 +185,8 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
     setMinecraftResult(null);
 
     try {
-      const result = await apiClient.askMinecraft(minecraftQuestion, minecraftEdition, minecraftDetail);
+      const edition = editionMode === "preferred" ? preferredEdition : "auto-detect";
+      const result = await apiClient.askMinecraft(minecraftQuestion, edition);
       setMinecraftResult(result);
     } catch (err) {
       setMinecraftError(err instanceof Error ? err.message : "Minecraft assistant failed");
@@ -287,38 +303,35 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken }) => {
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col md:flex-row gap-2 md:items-end">
                   <div className="flex-1">
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">Edition</label>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">Your preferred edition</label>
                     <select
-                      value={minecraftEdition}
+                      value={preferredEdition}
                       onChange={(e) =>
-                        setMinecraftEdition(
-                          e.target.value as "java" | "bedrock" | "auto-detect"
-                        )
+                        setPreferredEdition(e.target.value as "java" | "bedrock")
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
-                      <option value="auto-detect">Auto-detect</option>
                       <option value="java">Java Edition</option>
                       <option value="bedrock">Bedrock Edition</option>
                     </select>
                   </div>
                   <div className="flex-1">
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">Detail Level</label>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">Answer mode</label>
                     <select
-                      value={minecraftDetail}
+                      value={editionMode}
                       onChange={(e) =>
-                        setMinecraftDetail(
-                          e.target.value as "simple" | "normal" | "advanced"
-                        )
+                        setEditionMode(e.target.value as "preferred" | "auto-detect")
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
-                      <option value="simple">Simple (like I'm 7)</option>
-                      <option value="normal">Normal</option>
-                      <option value="advanced">Advanced</option>
+                      <option value="preferred">Use my preferred edition</option>
+                      <option value="auto-detect">Auto-detect from question</option>
                     </select>
                   </div>
                 </div>
+                <p className="text-xs text-slate-600">
+                  Auto-detect checks your question for Java/Bedrock clues. If unclear, it gives safe guidance for both editions.
+                </p>
                 <div className="flex flex-col md:flex-row gap-2 md:items-center">
                   <input
                     type="text"

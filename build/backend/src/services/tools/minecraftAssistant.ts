@@ -9,24 +9,24 @@ export interface MinecraftResponse {
 }
 
 type MinecraftEdition = "java" | "bedrock" | "auto-detect";
-type DetailLevel = "simple" | "normal" | "advanced";
+type ResolvedEdition = "java" | "bedrock" | "both";
 
 export class MinecraftAssistantService {
   constructor(private readonly foundry: FoundryService) {}
 
   async askMinecraft(
     question: string,
-    edition: MinecraftEdition = "auto-detect",
-    detailLevel: DetailLevel = "normal"
+    edition: MinecraftEdition = "auto-detect"
   ): Promise<MinecraftResponse> {
     // Validate safety: reject queries about griefing, exploits, or harm
     this.validateSafety(question);
 
     // Build system prompt with edition context
-    const systemPrompt = this.buildSystemPrompt(edition, detailLevel);
+    const resolvedEdition = this.resolveEdition(question, edition);
+    const systemPrompt = this.buildSystemPrompt(resolvedEdition);
 
     // Call Foundry with structured prompt to extract JSON
-    const userText = `User question: ${question}\n\nPlease respond with ONLY a valid JSON object (no markdown, no extra text) with these keys: answer, steps (array of strings), materials (array of strings), commands (array of strings), notes (string).`;
+    const userText = `User question: ${question}\n\nEdition selection mode: ${edition}. Resolved edition for this answer: ${resolvedEdition}.\n\nPlease respond with ONLY a valid JSON object (no markdown, no extra text) with these keys: answer, steps (array of strings), materials (array of strings), commands (array of strings), notes (string).`;
 
     const messages: ChatMessage[] = [
       {
@@ -55,7 +55,50 @@ export class MinecraftAssistantService {
     };
   }
 
-  private buildSystemPrompt(edition: MinecraftEdition, detailLevel: DetailLevel): string {
+  private resolveEdition(
+    question: string,
+    requestedEdition: MinecraftEdition
+  ): ResolvedEdition {
+    if (requestedEdition === "java" || requestedEdition === "bedrock") {
+      return requestedEdition;
+    }
+
+    const lower = question.toLowerCase();
+    const javaSignals = [
+      "java edition",
+      "fabric",
+      "forge",
+      "datapack",
+      "optifine",
+      "scoreboard objectives",
+      "nbt",
+    ];
+    const bedrockSignals = [
+      "bedrock edition",
+      "pocket edition",
+      "mcpe",
+      "marketplace",
+      "behavior pack",
+      "behaviour pack",
+      "addon",
+      "add-on",
+    ];
+
+    const hasJavaSignal = javaSignals.some((signal) => lower.includes(signal));
+    const hasBedrockSignal = bedrockSignals.some((signal) => lower.includes(signal));
+
+    if (hasJavaSignal && !hasBedrockSignal) {
+      return "java";
+    }
+
+    if (hasBedrockSignal && !hasJavaSignal) {
+      return "bedrock";
+    }
+
+    return "both";
+  }
+
+  private buildSystemPrompt(edition: ResolvedEdition): string {
     let editionContext = "";
     if (edition === "java") {
       editionContext =
@@ -68,22 +111,11 @@ export class MinecraftAssistantService {
         "Provide information for both Java and Bedrock editions when relevant. Highlight differences if they matter.";
     }
 
-    let detailContext = "";
-    if (detailLevel === "simple") {
-      detailContext =
-        "Explain everything like you're talking to a 7-year-old. Use simple words. Keep it short.";
-    } else if (detailLevel === "advanced") {
-      detailContext =
-        "Provide advanced technical details, optimizations, and edge cases. Assume player expertise.";
-    } else {
-      detailContext = "Provide clear, balanced explanations suitable for most players.";
-    }
-
     return `You are a friendly, helpful Minecraft Assistant. Your job is to teach players about Minecraft concepts, crafting recipes, building guides, redstone logic, mob behavior, survival tips, and game commands.
 
 ${editionContext}
 
-${detailContext}
+Provide clear, balanced explanations suitable for most players.
 
 SAFETY RULES (STRICT):
 - NEVER provide griefing instructions or PvP harm tactics
@@ -93,6 +125,7 @@ SAFETY RULES (STRICT):
 - Always encourage creativity, collaboration, and safe play
 - Keep responses age-appropriate and family-friendly
 - If a question seems unsafe, politely decline and offer a constructive alternative
+- Stay in the spirit of normal gameplay: avoid glitches, dupes, exploits, or shortcut advice that bypasses fair progression.
 
 RESPONSE FORMAT:
 You MUST respond with ONLY a valid JSON object (no markdown code fences, no extra text). The JSON must have exactly these keys:
