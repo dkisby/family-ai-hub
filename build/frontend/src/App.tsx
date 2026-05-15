@@ -43,8 +43,12 @@ function AuthenticatedApp() {
         console.error("Token acquisition failed:", error);
         setToken(null);
         if (axios.isAxiosError(error) && error.response?.status === 403) {
+          const errorCode =
+            typeof error.response.data?.code === "string"
+              ? ` (${error.response.data.code})`
+              : "";
           setTokenError(
-            "Access denied. Your account is signed in, but it is not assigned to an allowed Entra group for this app."
+            `Access denied${errorCode}. Your account is signed in, but it is not assigned to an allowed Entra group for this app.`
           );
         } else {
           setTokenError("Could not get API access token. Grant API access and try again.");
