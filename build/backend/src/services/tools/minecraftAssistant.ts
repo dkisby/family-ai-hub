@@ -140,26 +140,48 @@ Example valid response:
   }
 
   private validateSafety(question: string): void {
-    const unsafeKeywords = [
-      /grief|destroy.*home|raid.*base|steal|dupe|exploit|hack|cheat.*client|griefing|grief/i,
-      /pvp.*kill|kill.*player|attack.*player|hurt.*player/i,
-      /hack|mod.*hack|x-ray|kill.*aura|aimbot|fly.*hack|speed.*hack/i,
-      /server.*crash|crash.*server|lag.*machine|ddos|lag.*spike/i,
-      /cheat.*engine|cheat.*tool|bypass.*ban|bypass.*anticheat/i,
+    const input = question.toLowerCase();
+
+    const unsafeTerms = [
+      "grief",
+      "griefing",
+      "destroy home",
+      "raid base",
+      "steal",
+      "dupe",
+      "exploit",
+      "hack",
+      "cheat client",
+      "pvp kill",
+      "kill player",
+      "attack player",
+      "hurt player",
+      "mod hack",
+      "x-ray",
+      "kill aura",
+      "aimbot",
+      "fly hack",
+      "speed hack",
+      "server crash",
+      "crash server",
+      "lag machine",
+      "ddos",
+      "lag spike",
+      "cheat engine",
+      "cheat tool",
+      "bypass ban",
+      "bypass anticheat",
     ];
 
-    for (const pattern of unsafeKeywords) {
-      if (pattern.test(question)) {
-        throw new Error(
-          "I can't help with that. I focus on constructive Minecraft gameplay, building, and learning. " +
-            "Feel free to ask about crafting, building, redstone, survival tips, or game commands instead!"
-        );
-      }
+    if (unsafeTerms.some((term) => input.includes(term))) {
+      throw new Error(
+        "I can't help with that. I focus on constructive Minecraft gameplay, building, and learning. " +
+          "Feel free to ask about crafting, building, redstone, survival tips, or game commands instead!"
+      );
     }
   }
 
   private parseMinecraftResponse(content: string): Partial<MinecraftResponse> {
-    // Try to extract the first top-level JSON object without regex backtracking.
     const startIndex = content.indexOf("{");
     const endIndex = content.lastIndexOf("}");
     if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
