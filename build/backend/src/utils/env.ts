@@ -20,6 +20,7 @@ export interface Environment {
   FRONTEND_ORIGIN: string;
   CORS_ALLOWED_ORIGINS: string[];
   NODE_ENV: "development" | "production";
+  DATABASE_URL: string;
 }
 
 export function loadEnv(): Environment {
@@ -44,6 +45,7 @@ export function loadEnv(): Environment {
     FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || "",
     CORS_ALLOWED_ORIGINS: corsAllowedOrigins,
     NODE_ENV: (process.env.NODE_ENV as "development" | "production") || "development",
+    DATABASE_URL: process.env.DATABASE_URL || "",
   };
 
   const required = ["FOUNDRY_ENDPOINT", "FOUNDRY_API_KEY", "ENTRA_TENANT_ID"];

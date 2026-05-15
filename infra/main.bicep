@@ -6,6 +6,16 @@ param deployBackendAPI bool = false
 @description('Whether to deploy the frontend UI')
 param deployFrontendUI bool = false
 
+@description('Whether to deploy PostgreSQL Flexible Server')
+param deployPostgres bool = false
+
+@description('PostgreSQL administrator login')
+param postgresAdminLogin string = 'dbadmin'
+
+@description('PostgreSQL administrator password')
+@secure()
+param postgresAdminPassword string = ''
+
 @description('Backend API container image')
 param backendAPIImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
@@ -33,6 +43,13 @@ param enableFrontendCustomDomainTls bool = false
 var tenantId = tenant().tenantId
 var acaEnvName = 'env-family-hub'
 var logAnalyticsName = 'log-family-hub'
+var postgresServerName = 'psql-family-hub'
+
+// Build DATABASE_URL only when postgres is deployed and a password is supplied.
+// The ternary avoids evaluating module outputs when deployPostgres=false.
+var databaseUrl = deployPostgres
+  ? 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServerName}.postgres.database.azure.com:5432/familyhub?sslmode=require'
+  : ''
 
 module logAnalytics './modules/logAnalytics.bicep' = {
   name: 'logAnalytics'
@@ -137,6 +154,16 @@ module foundryProject './modules/foundryProject.bicep' = {
   }
 }
 
+module postgres './modules/postgresFlexServer.bicep' = if (deployPostgres) {
+  name: 'postgres'
+  params: {
+    name: postgresServerName
+    location: location
+    administratorLogin: postgresAdminLogin
+    administratorPassword: postgresAdminPassword
+  }
+}
+
 module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
   name: 'backendAPI'
   params: {
@@ -152,6 +179,7 @@ module backendAPI './modules/acaBackendAPI.bicep' = if (deployBackendAPI) {
     frontendOrigin: frontendOrigin
     foundryEndpoint: foundryResource.outputs.openaiEndpoint
     foundryApiKey: keyVaultRef.getSecret('foundry-api-key')
+    databaseUrl: databaseUrl
     acaEnvironmentResourceGroup: resourceGroup().name
     acaEnvironmentSubscription: subscription().subscriptionId
   }

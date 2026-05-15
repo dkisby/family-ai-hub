@@ -43,6 +43,58 @@ export interface MinecraftAssistantResult {
   notes: string;
 }
 
+export type LocationCategory =
+  | "shelter"
+  | "bed"
+  | "house"
+  | "village"
+  | "cave"
+  | "poi"
+  | "noi";
+
+export type Dimension = "overworld" | "nether" | "end";
+
+export interface MinecraftLocation {
+  id: string;
+  world_id: string;
+  name: string | null;
+  category: LocationCategory;
+  x: number;
+  y: number;
+  z: number;
+  dimension: Dimension;
+  comment: string;
+  created_at: string;
+}
+
+export interface NearestLocation extends MinecraftLocation {
+  distance: number;
+}
+
+export interface ExploreSuggestion {
+  direction: string;
+  reason: string;
+  suggestedX: number;
+  suggestedZ: number;
+}
+
+export interface SaveLocationInput {
+  world_id: string;
+  name?: string;
+  category: LocationCategory;
+  x: number;
+  y: number;
+  z: number;
+  dimension?: Dimension;
+  comment: string;
+}
+
+export interface UpdateLocationInput {
+  name?: string;
+  comment?: string;
+  category?: LocationCategory;
+}
+
 export interface CurrentUser {
   oid: string;
   email: string;
@@ -164,6 +216,64 @@ class APIClient {
     });
 
     return response.data.result;
+  }
+
+  // ── Minecraft Locations ───────────────────────────────────────────────────
+
+  async saveLocation(input: SaveLocationInput): Promise<MinecraftLocation> {
+    const response = await this.client.post<MinecraftLocation>(
+      "/api/tools/minecraft-locations",
+      input
+    );
+    return response.data;
+  }
+
+  async listLocations(worldId: string): Promise<MinecraftLocation[]> {
+    const response = await this.client.get<MinecraftLocation[]>(
+      "/api/tools/minecraft-locations",
+      { params: { world_id: worldId } }
+    );
+    return response.data;
+  }
+
+  async findNearest(
+    worldId: string,
+    x: number,
+    z: number,
+    shelterOnly = true
+  ): Promise<NearestLocation> {
+    const response = await this.client.get<NearestLocation>(
+      "/api/tools/minecraft-locations/nearest",
+      { params: { world_id: worldId, x, z, shelterOnly } }
+    );
+    return response.data;
+  }
+
+  async getExploreSuggestions(worldId: string): Promise<ExploreSuggestion[]> {
+    const response = await this.client.get<ExploreSuggestion[]>(
+      "/api/tools/minecraft-locations/explore-suggestions",
+      { params: { world_id: worldId } }
+    );
+    return response.data;
+  }
+
+  async deleteLocation(id: string, worldId: string): Promise<void> {
+    await this.client.delete(`/api/tools/minecraft-locations/${id}`, {
+      params: { world_id: worldId },
+    });
+  }
+
+  async updateLocation(
+    id: string,
+    worldId: string,
+    updates: UpdateLocationInput
+  ): Promise<MinecraftLocation> {
+    const response = await this.client.put<MinecraftLocation>(
+      `/api/tools/minecraft-locations/${id}`,
+      updates,
+      { params: { world_id: worldId } }
+    );
+    return response.data;
   }
 }
 

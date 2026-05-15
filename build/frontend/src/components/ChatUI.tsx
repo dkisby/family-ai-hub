@@ -3,6 +3,11 @@ import {
   ChatMessage as IChatMessage,
   PlantAssistantResult,
   MinecraftAssistantResult,
+  MinecraftLocation,
+  NearestLocation,
+  ExploreSuggestion,
+  LocationCategory,
+  Dimension,
 } from "../services/api";
 import { apiClient } from "../services/api";
 
@@ -11,7 +16,7 @@ interface ChatUIProps {
   preferenceKey: string;
 }
 
-type ToolTab = "plant" | "minecraft";
+type ToolTab = "plant" | "minecraft" | "locations";
 
 export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
   const [messages, setMessages] = useState<IChatMessage[]>([]);
@@ -28,6 +33,38 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
   const [minecraftError, setMinecraftError] = useState<string | null>(null);
   const [minecraftResult, setMinecraftResult] = useState<MinecraftAssistantResult | null>(null);
   const [activeToolTab, setActiveToolTab] = useState<ToolTab>("plant");
+
+  // Locations state
+  const [locWorldId, setLocWorldId] = useState("");
+  const [locName, setLocName] = useState("");
+  const [locCategory, setLocCategory] = useState<LocationCategory>("shelter");
+  const [locX, setLocX] = useState("");
+  const [locY, setLocY] = useState("");
+  const [locZ, setLocZ] = useState("");
+  const [locDimension, setLocDimension] = useState<Dimension>("overworld");
+  const [locComment, setLocComment] = useState("");
+  const [locSaveLoading, setLocSaveLoading] = useState(false);
+  const [locSaveError, setLocSaveError] = useState<string | null>(null);
+  const [locSaveSuccess, setLocSaveSuccess] = useState<MinecraftLocation | null>(null);
+
+  const [locListWorldId, setLocListWorldId] = useState("");
+  const [locListLoading, setLocListLoading] = useState(false);
+  const [locListError, setLocListError] = useState<string | null>(null);
+  const [locList, setLocList] = useState<MinecraftLocation[] | null>(null);
+
+  const [locNearestWorldId, setLocNearestWorldId] = useState("");
+  const [locNearestX, setLocNearestX] = useState("");
+  const [locNearestZ, setLocNearestZ] = useState("");
+  const [locNearestShelterOnly, setLocNearestShelterOnly] = useState(true);
+  const [locNearestLoading, setLocNearestLoading] = useState(false);
+  const [locNearestError, setLocNearestError] = useState<string | null>(null);
+  const [locNearest, setLocNearest] = useState<NearestLocation | null>(null);
+
+  const [locExploreWorldId, setLocExploreWorldId] = useState("");
+  const [locExploreLoading, setLocExploreLoading] = useState(false);
+  const [locExploreError, setLocExploreError] = useState<string | null>(null);
+  const [locSuggestions, setLocSuggestions] = useState<ExploreSuggestion[] | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -195,6 +232,93 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
     }
   };
 
+  // ── Location handlers ─────────────────────────────────────────────────────
+
+  const handleSaveLocation = async () => {
+    setLocSaveLoading(true);
+    setLocSaveError(null);
+    setLocSaveSuccess(null);
+    try {
+      const location = await apiClient.saveLocation({
+        world_id: locWorldId.trim(),
+        name: locName.trim() || undefined,
+        category: locCategory,
+        x: parseInt(locX, 10),
+        y: parseInt(locY, 10),
+        z: parseInt(locZ, 10),
+        dimension: locDimension,
+        comment: locComment.trim(),
+      });
+      setLocSaveSuccess(location);
+      setLocName("");
+      setLocX("");
+      setLocY("");
+      setLocZ("");
+      setLocComment("");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save location";
+      setLocSaveError(msg);
+    } finally {
+      setLocSaveLoading(false);
+    }
+  };
+
+  const handleListLocations = async () => {
+    setLocListLoading(true);
+    setLocListError(null);
+    setLocList(null);
+    try {
+      const list = await apiClient.listLocations(locListWorldId.trim());
+      setLocList(list);
+    } catch (err) {
+      setLocListError(err instanceof Error ? err.message : "Failed to list locations");
+    } finally {
+      setLocListLoading(false);
+    }
+  };
+
+  const handleFindNearest = async () => {
+    setLocNearestLoading(true);
+    setLocNearestError(null);
+    setLocNearest(null);
+    try {
+      const result = await apiClient.findNearest(
+        locNearestWorldId.trim(),
+        parseInt(locNearestX, 10),
+        parseInt(locNearestZ, 10),
+        locNearestShelterOnly
+      );
+      setLocNearest(result);
+    } catch (err) {
+      setLocNearestError(err instanceof Error ? err.message : "Failed to find nearest location");
+    } finally {
+      setLocNearestLoading(false);
+    }
+  };
+
+  const handleExploreSuggestions = async () => {
+    setLocExploreLoading(true);
+    setLocExploreError(null);
+    setLocSuggestions(null);
+    try {
+      const suggestions = await apiClient.getExploreSuggestions(locExploreWorldId.trim());
+      setLocSuggestions(suggestions);
+    } catch (err) {
+      setLocExploreError(err instanceof Error ? err.message : "Failed to get suggestions");
+    } finally {
+      setLocExploreLoading(false);
+    }
+  };
+
+  const handleDeleteLocation = async (id: string, worldId: string) => {
+    try {
+      await apiClient.deleteLocation(id, worldId);
+      setLocList((prev) => prev ? prev.filter((l) => l.id !== id) : prev);
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-50/80 backdrop-blur-sm">
       <div className="border-b border-gray-200/80 bg-white/85 p-4">
@@ -231,6 +355,17 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
               }`}
             >
               Minecraft Assistant
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveToolTab("locations")}
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
+                activeToolTab === "locations"
+                  ? "bg-amber-700 text-white"
+                  : "bg-white text-slate-700 hover:bg-amber-100"
+              }`}
+            >
+              MC GPS
             </button>
           </div>
 
@@ -406,6 +541,253 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeToolTab === "locations" && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-4">
+              <p className="text-sm text-slate-700">
+                Save and retrieve Minecraft coordinates across multiple worlds.
+              </p>
+
+              {/* ── Save location ── */}
+              <details className="group" open>
+                <summary className="cursor-pointer text-sm font-semibold text-amber-800 select-none">
+                  Save a Location
+                </summary>
+                <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    value={locWorldId}
+                    onChange={(e) => setLocWorldId(e.target.value)}
+                    placeholder="World ID (e.g. world1)"
+                    className="col-span-2 md:col-span-3 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={locName}
+                    onChange={(e) => setLocName(e.target.value)}
+                    placeholder="Name (optional)"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <select
+                    value={locCategory}
+                    onChange={(e) => setLocCategory(e.target.value as LocationCategory)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="shelter">Shelter</option>
+                    <option value="bed">Bed</option>
+                    <option value="house">House</option>
+                    <option value="village">Village</option>
+                    <option value="cave">Cave</option>
+                    <option value="poi">POI</option>
+                    <option value="noi">NOI (Nothing of Interest)</option>
+                  </select>
+                  <select
+                    value={locDimension}
+                    onChange={(e) => setLocDimension(e.target.value as Dimension)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="overworld">Overworld</option>
+                    <option value="nether">Nether</option>
+                    <option value="end">End</option>
+                  </select>
+                  <input
+                    type="number"
+                    value={locX}
+                    onChange={(e) => setLocX(e.target.value)}
+                    placeholder="X"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <input
+                    type="number"
+                    value={locY}
+                    onChange={(e) => setLocY(e.target.value)}
+                    placeholder="Y"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <input
+                    type="number"
+                    value={locZ}
+                    onChange={(e) => setLocZ(e.target.value)}
+                    placeholder="Z"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={locComment}
+                    onChange={(e) => setLocComment(e.target.value)}
+                    placeholder="Comment (required)"
+                    className="col-span-2 md:col-span-3 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveLocation}
+                    disabled={locSaveLoading || !locWorldId.trim() || !locX || !locY || !locZ || !locComment.trim()}
+                    className="col-span-2 md:col-span-3 px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {locSaveLoading ? "Saving..." : "Save Location"}
+                  </button>
+                </div>
+                {locSaveError && (
+                  <div className="mt-2 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">{locSaveError}</div>
+                )}
+                {locSaveSuccess && (
+                  <div className="mt-2 text-sm text-green-800 bg-green-100 px-3 py-2 rounded">
+                    Saved: <strong>{locSaveSuccess.name ?? "Unnamed"}</strong> ({locSaveSuccess.category}) at ({locSaveSuccess.x}, {locSaveSuccess.y}, {locSaveSuccess.z})
+                  </div>
+                )}
+              </details>
+
+              {/* ── List locations ── */}
+              <details className="group">
+                <summary className="cursor-pointer text-sm font-semibold text-amber-800 select-none">
+                  List All Locations
+                </summary>
+                <div className="mt-2 flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={locListWorldId}
+                    onChange={(e) => setLocListWorldId(e.target.value)}
+                    placeholder="World ID"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleListLocations}
+                    disabled={locListLoading || !locListWorldId.trim()}
+                    className="px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {locListLoading ? "Loading..." : "List"}
+                  </button>
+                </div>
+                {locListError && (
+                  <div className="mt-2 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">{locListError}</div>
+                )}
+                {locList && (
+                  <div className="mt-2 space-y-1 max-h-64 overflow-y-auto">
+                    {locList.length === 0 ? (
+                      <p className="text-sm text-slate-500">No locations saved for this world.</p>
+                    ) : (
+                      locList.map((loc) => (
+                        <div key={loc.id} className="flex items-start justify-between gap-2 bg-white border border-amber-200 rounded px-3 py-2 text-xs">
+                          <div>
+                            <span className="font-semibold">{loc.name ?? "Unnamed"}</span>
+                            <span className="ml-2 text-amber-700 capitalize">[{loc.category}]</span>
+                            <span className="ml-2 text-slate-500">{loc.dimension}</span>
+                            <span className="ml-2 font-mono">({loc.x}, {loc.y}, {loc.z})</span>
+                            <p className="text-slate-600 mt-0.5">{loc.comment}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLocation(loc.id, loc.world_id)}
+                            className="text-red-500 hover:text-red-700 shrink-0 text-xs"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </details>
+
+              {/* ── Nearest shelter ── */}
+              <details className="group">
+                <summary className="cursor-pointer text-sm font-semibold text-amber-800 select-none">
+                  Find Nearest Location
+                </summary>
+                <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    value={locNearestWorldId}
+                    onChange={(e) => setLocNearestWorldId(e.target.value)}
+                    placeholder="World ID"
+                    className="col-span-2 md:col-span-4 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <input
+                    type="number"
+                    value={locNearestX}
+                    onChange={(e) => setLocNearestX(e.target.value)}
+                    placeholder="Your X"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <input
+                    type="number"
+                    value={locNearestZ}
+                    onChange={(e) => setLocNearestZ(e.target.value)}
+                    placeholder="Your Z"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="shelterOnly"
+                      type="checkbox"
+                      checked={locNearestShelterOnly}
+                      onChange={(e) => setLocNearestShelterOnly(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="shelterOnly" className="text-xs text-slate-700">Shelter only</label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFindNearest}
+                    disabled={locNearestLoading || !locNearestWorldId.trim() || !locNearestX || !locNearestZ}
+                    className="px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {locNearestLoading ? "Searching..." : "Find"}
+                  </button>
+                </div>
+                {locNearestError && (
+                  <div className="mt-2 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">{locNearestError}</div>
+                )}
+                {locNearest && (
+                  <div className="mt-2 bg-white border border-amber-200 rounded px-3 py-2 text-sm">
+                    <p className="font-semibold">{locNearest.name ?? "Unnamed"} <span className="text-amber-700 capitalize">[{locNearest.category}]</span></p>
+                    <p className="font-mono text-xs">({locNearest.x}, {locNearest.y}, {locNearest.z}) — {locNearest.dimension}</p>
+                    <p className="text-slate-600 text-xs mt-1">{locNearest.comment}</p>
+                    <p className="text-xs text-slate-500 mt-1">Distance: <strong>{Math.round(locNearest.distance)} blocks</strong></p>
+                  </div>
+                )}
+              </details>
+
+              {/* ── Explore suggestions ── */}
+              <details className="group">
+                <summary className="cursor-pointer text-sm font-semibold text-amber-800 select-none">
+                  Where Should I Explore?
+                </summary>
+                <div className="mt-2 flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={locExploreWorldId}
+                    onChange={(e) => setLocExploreWorldId(e.target.value)}
+                    placeholder="World ID"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleExploreSuggestions}
+                    disabled={locExploreLoading || !locExploreWorldId.trim()}
+                    className="px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {locExploreLoading ? "Thinking..." : "Suggest"}
+                  </button>
+                </div>
+                {locExploreError && (
+                  <div className="mt-2 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">{locExploreError}</div>
+                )}
+                {locSuggestions && (
+                  <div className="mt-2 space-y-2">
+                    {locSuggestions.map((s, idx) => (
+                      <div key={idx} className="bg-white border border-amber-200 rounded px-3 py-2 text-sm">
+                        <p className="font-semibold capitalize">{s.direction}</p>
+                        <p className="text-slate-700">{s.reason}</p>
+                        <p className="font-mono text-xs text-slate-500 mt-1">Try: X={s.suggestedX}, Z={s.suggestedZ}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </details>
             </div>
           )}
         </div>

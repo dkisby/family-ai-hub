@@ -35,6 +35,10 @@ param foundryEndpoint string
 @secure()
 param foundryApiKey string
 
+@description('PostgreSQL connection string (leave empty to disable location features)')
+@secure()
+param databaseUrl string = ''
+
 @description('Container App environment resource group')
 param acaEnvironmentResourceGroup string
 
@@ -110,6 +114,10 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'NODE_ENV'
               value: 'production'
+            }
+            {
+              name: 'DATABASE_URL'
+              value: databaseUrl
             }
           ]
           probes: [

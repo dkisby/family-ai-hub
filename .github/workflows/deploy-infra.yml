@@ -19,6 +19,11 @@ on:
         required: true
         default: true
         type: boolean
+      deployPostgres:
+        description: 'Deploy PostgreSQL Flexible Server'
+        required: true
+        default: false
+        type: boolean
       runTwoPhaseFrontendDomainDeployment:
         description: 'For manual runs, deploy frontend domain in two phases automatically (hostname first, then TLS)'
         required: true
@@ -36,6 +41,7 @@ concurrency:
 env:
   DEPLOY_BACKEND_API: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deployBackendAPI || 'true' }}
   DEPLOY_FRONTEND_UI: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deployFrontendUI || 'true' }}
+  DEPLOY_POSTGRES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deployPostgres || 'false' }}
   RUN_TWO_PHASE_FRONTEND_DOMAIN_DEPLOYMENT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runTwoPhaseFrontendDomainDeployment || 'true' }}
   REGISTRY_URL: acrfamilyhub.azurecr.io
   FRONTEND_IMAGE_NAME: frontend-family-hub
@@ -62,13 +68,15 @@ jobs:
               --resource-group ${{ secrets.AZURE_RG }} \
               --template-file infra/main.bicep \
               --parameters infra/parameters/main.parameters.json \
-              --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI enableFrontendCustomDomainTls=false
+              --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI deployPostgres=$DEPLOY_POSTGRES enableFrontendCustomDomainTls=false \
+              --parameters postgresAdminPassword=${{ secrets.POSTGRES_ADMIN_PASSWORD }}
           else
             az deployment group what-if \
               --resource-group ${{ secrets.AZURE_RG }} \
               --template-file infra/main.bicep \
               --parameters infra/parameters/main.parameters.json \
-              --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI enableFrontendCustomDomainTls=true
+              --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI deployPostgres=$DEPLOY_POSTGRES enableFrontendCustomDomainTls=true \
+              --parameters postgresAdminPassword=${{ secrets.POSTGRES_ADMIN_PASSWORD }}
           fi
 
   deploy:
@@ -119,10 +127,11 @@ jobs:
           DEPLOY_ARGS="--resource-group ${{ secrets.AZURE_RG }} \
             --template-file infra/main.bicep \
             --parameters infra/parameters/main.parameters.json \
-            --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI \
+            --parameters deployBackendAPI=$DEPLOY_BACKEND_API deployFrontendUI=$DEPLOY_FRONTEND_UI deployPostgres=$DEPLOY_POSTGRES \
             entraClientId=${{ secrets.ENTRA_CLIENT_ID }} \
             entraApiClientId=${{ secrets.ENTRA_API_CLIENT_ID }} \
             frontendOrigin=https://hub.kisbyfamily.com \
+            postgresAdminPassword=${{ secrets.POSTGRES_ADMIN_PASSWORD }} \
             backendAPIImage=$REGISTRY_URL/$BACKEND_IMAGE_NAME:latest \
             frontendUIImage=$REGISTRY_URL/$FRONTEND_IMAGE_NAME:latest"
 
