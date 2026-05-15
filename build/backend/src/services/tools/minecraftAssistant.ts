@@ -159,9 +159,10 @@ Example valid response:
   }
 
   private parseMinecraftResponse(content: string): Partial<MinecraftResponse> {
-    // Try to extract JSON from the response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    // Try to extract the first top-level JSON object without regex backtracking.
+    const startIndex = content.indexOf("{");
+    const endIndex = content.lastIndexOf("}");
+    if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
       console.warn("No JSON found in response:", content);
       return {
         answer: content,
@@ -173,7 +174,7 @@ Example valid response:
     }
 
     try {
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(content.slice(startIndex, endIndex + 1));
 
       // Validate structure
       return {
