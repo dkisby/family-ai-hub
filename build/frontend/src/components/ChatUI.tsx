@@ -35,7 +35,10 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
   const [activeToolTab, setActiveToolTab] = useState<ToolTab>("plant");
 
   // Locations state
-  const [locWorldId, setLocWorldId] = useState("");
+  const [worldOptions, setWorldOptions] = useState<string[]>([]);
+  const [selectedWorldId, setSelectedWorldId] = useState("");
+  const [newWorldIdInput, setNewWorldIdInput] = useState("");
+
   const [locName, setLocName] = useState("");
   const [locCategory, setLocCategory] = useState<LocationCategory>("shelter");
   const [locX, setLocX] = useState("");
@@ -47,12 +50,10 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
   const [locSaveError, setLocSaveError] = useState<string | null>(null);
   const [locSaveSuccess, setLocSaveSuccess] = useState<MinecraftLocation | null>(null);
 
-  const [locListWorldId, setLocListWorldId] = useState("");
   const [locListLoading, setLocListLoading] = useState(false);
   const [locListError, setLocListError] = useState<string | null>(null);
   const [locList, setLocList] = useState<MinecraftLocation[] | null>(null);
 
-  const [locNearestWorldId, setLocNearestWorldId] = useState("");
   const [locNearestX, setLocNearestX] = useState("");
   const [locNearestZ, setLocNearestZ] = useState("");
   const [locNearestShelterOnly, setLocNearestShelterOnly] = useState(true);
@@ -60,7 +61,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
   const [locNearestError, setLocNearestError] = useState<string | null>(null);
   const [locNearest, setLocNearest] = useState<NearestLocation | null>(null);
 
-  const [locExploreWorldId, setLocExploreWorldId] = useState("");
+  const [locExploreDistance, setLocExploreDistance] = useState<100 | 500 | 1000>(500);
   const [locExploreLoading, setLocExploreLoading] = useState(false);
   const [locExploreError, setLocExploreError] = useState<string | null>(null);
   const [locSuggestions, setLocSuggestions] = useState<ExploreSuggestion[] | null>(null);
@@ -85,6 +86,39 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
     const key = `familyHub.minecraft.preferredEdition.${preferenceKey}`;
     window.localStorage.setItem(key, preferredEdition);
   }, [preferenceKey, preferredEdition]);
+
+  useEffect(() => {
+    const worldsKey = `familyHub.minecraft.worldIds.${preferenceKey}`;
+    const selectedKey = `familyHub.minecraft.selectedWorldId.${preferenceKey}`;
+
+    const savedWorldsRaw = window.localStorage.getItem(worldsKey);
+    const savedSelected = window.localStorage.getItem(selectedKey) ?? "";
+
+    let parsedWorlds: string[] = [];
+    if (savedWorldsRaw) {
+      try {
+        const parsed = JSON.parse(savedWorldsRaw);
+        if (Array.isArray(parsed)) {
+          parsedWorlds = parsed.filter((item): item is string => typeof item === "string");
+        }
+      } catch {
+      }
+    }
+
+    setWorldOptions(parsedWorlds);
+    if (savedSelected && parsedWorlds.includes(savedSelected)) {
+      setSelectedWorldId(savedSelected);
+    } else if (parsedWorlds.length > 0) {
+      setSelectedWorldId(parsedWorlds[0]);
+    }
+  }, [preferenceKey]);
+
+  useEffect(() => {
+    const worldsKey = `familyHub.minecraft.worldIds.${preferenceKey}`;
+    const selectedKey = `familyHub.minecraft.selectedWorldId.${preferenceKey}`;
+    window.localStorage.setItem(worldsKey, JSON.stringify(worldOptions));
+    window.localStorage.setItem(selectedKey, selectedWorldId);
+  }, [preferenceKey, selectedWorldId, worldOptions]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -234,13 +268,22 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
 
   // ── Location handlers ─────────────────────────────────────────────────────
 
+  const handleAddWorldId = () => {
+    const worldId = newWorldIdInput.trim();
+    if (!worldId) return;
+
+    setWorldOptions((prev) => (prev.includes(worldId) ? prev : [...prev, worldId]));
+    setSelectedWorldId(worldId);
+    setNewWorldIdInput("");
+  };
+
   const handleSaveLocation = async () => {
     setLocSaveLoading(true);
     setLocSaveError(null);
     setLocSaveSuccess(null);
     try {
       const location = await apiClient.saveLocation({
-        world_id: locWorldId.trim(),
+        world_id: selectedWorldId.trim(),
         name: locName.trim() || undefined,
         category: locCategory,
         x: parseInt(locX, 10),
@@ -249,6 +292,12 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
         dimension: locDimension,
         comment: locComment.trim(),
       });
+
+      setWorldOptions((prev) =>
+        prev.includes(location.world_id) ? prev : [...prev, location.world_id]
+      );
+      setSelectedWorldId(location.world_id);
+
       setLocSaveSuccess(location);
       setLocName("");
       setLocX("");
@@ -268,7 +317,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
     setLocListError(null);
     setLocList(null);
     try {
-      const list = await apiClient.listLocations(locListWorldId.trim());
+      const list = await apiClient.listLocations(selectedWorldId.trim());
       setLocList(list);
     } catch (err) {
       setLocListError(err instanceof Error ? err.message : "Failed to list locations");
@@ -283,7 +332,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
     setLocNearest(null);
     try {
       const result = await apiClient.findNearest(
-        locNearestWorldId.trim(),
+        selectedWorldId.trim(),
         parseInt(locNearestX, 10),
         parseInt(locNearestZ, 10),
         locNearestShelterOnly
@@ -301,7 +350,10 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
     setLocExploreError(null);
     setLocSuggestions(null);
     try {
-      const suggestions = await apiClient.getExploreSuggestions(locExploreWorldId.trim());
+      const suggestions = await apiClient.getExploreSuggestions(
+        selectedWorldId.trim(),
+        locExploreDistance
+      );
       setLocSuggestions(suggestions);
     } catch (err) {
       setLocExploreError(err instanceof Error ? err.message : "Failed to get suggestions");
@@ -550,19 +602,52 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
                 Save and retrieve Minecraft coordinates across multiple worlds.
               </p>
 
+              <div className="rounded-md border border-amber-300 bg-amber-100/60 p-3">
+                <p className="text-xs font-semibold text-amber-900 mb-2">World Selection</p>
+                <div className="flex flex-col md:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={newWorldIdInput}
+                    onChange={(e) => setNewWorldIdInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddWorldId();
+                      }
+                    }}
+                    placeholder="Add world ID (e.g. world1)"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddWorldId}
+                    disabled={!newWorldIdInput.trim()}
+                    className="px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    Add World
+                  </button>
+                </div>
+
+                <div className="mt-2">
+                  <select
+                    value={selectedWorldId}
+                    onChange={(e) => setSelectedWorldId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="">Select a saved world</option>
+                    {worldOptions.map((worldId) => (
+                      <option key={worldId} value={worldId}>{worldId}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* ── Save location ── */}
               <details className="group" open>
                 <summary className="cursor-pointer text-sm font-semibold text-amber-800 select-none">
                   Save a Location
                 </summary>
                 <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
-                  <input
-                    type="text"
-                    value={locWorldId}
-                    onChange={(e) => setLocWorldId(e.target.value)}
-                    placeholder="World ID (e.g. world1)"
-                    className="col-span-2 md:col-span-3 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
                   <input
                     type="text"
                     value={locName}
@@ -623,7 +708,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
                   <button
                     type="button"
                     onClick={handleSaveLocation}
-                    disabled={locSaveLoading || !locWorldId.trim() || !locX || !locY || !locZ || !locComment.trim()}
+                    disabled={locSaveLoading || !selectedWorldId.trim() || !locX || !locY || !locZ || !locComment.trim()}
                     className="col-span-2 md:col-span-3 px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {locSaveLoading ? "Saving..." : "Save Location"}
@@ -645,17 +730,10 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
                   List All Locations
                 </summary>
                 <div className="mt-2 flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={locListWorldId}
-                    onChange={(e) => setLocListWorldId(e.target.value)}
-                    placeholder="World ID"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
                   <button
                     type="button"
                     onClick={handleListLocations}
-                    disabled={locListLoading || !locListWorldId.trim()}
+                    disabled={locListLoading || !selectedWorldId.trim()}
                     className="px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {locListLoading ? "Loading..." : "List"}
@@ -699,13 +777,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
                 </summary>
                 <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
                   <input
-                    type="text"
-                    value={locNearestWorldId}
-                    onChange={(e) => setLocNearestWorldId(e.target.value)}
-                    placeholder="World ID"
-                    className="col-span-2 md:col-span-4 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                  <input
                     type="number"
                     value={locNearestX}
                     onChange={(e) => setLocNearestX(e.target.value)}
@@ -732,7 +803,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
                   <button
                     type="button"
                     onClick={handleFindNearest}
-                    disabled={locNearestLoading || !locNearestWorldId.trim() || !locNearestX || !locNearestZ}
+                    disabled={locNearestLoading || !selectedWorldId.trim() || !locNearestX || !locNearestZ}
                     className="px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {locNearestLoading ? "Searching..." : "Find"}
@@ -757,17 +828,19 @@ export const ChatUI: React.FC<ChatUIProps> = ({ authToken, preferenceKey }) => {
                   Where Should I Explore?
                 </summary>
                 <div className="mt-2 flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={locExploreWorldId}
-                    onChange={(e) => setLocExploreWorldId(e.target.value)}
-                    placeholder="World ID"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
+                  <select
+                    value={locExploreDistance}
+                    onChange={(e) => setLocExploreDistance(Number(e.target.value) as 100 | 500 | 1000)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value={100}>100 blocks away</option>
+                    <option value={500}>500 blocks away</option>
+                    <option value={1000}>1000 blocks away</option>
+                  </select>
                   <button
                     type="button"
                     onClick={handleExploreSuggestions}
-                    disabled={locExploreLoading || !locExploreWorldId.trim()}
+                    disabled={locExploreLoading || !selectedWorldId.trim()}
                     className="px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {locExploreLoading ? "Thinking..." : "Suggest"}

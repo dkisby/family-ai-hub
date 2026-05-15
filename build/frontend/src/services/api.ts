@@ -249,10 +249,18 @@ class APIClient {
     return response.data;
   }
 
-  async getExploreSuggestions(worldId: string): Promise<ExploreSuggestion[]> {
+  async getExploreSuggestions(
+    worldId: string,
+    distanceBlocks?: number
+  ): Promise<ExploreSuggestion[]> {
     const response = await this.client.get<ExploreSuggestion[]>(
       "/api/tools/minecraft-locations/explore-suggestions",
-      { params: { world_id: worldId } }
+      {
+        params: {
+          world_id: worldId,
+          ...(distanceBlocks ? { distance_blocks: distanceBlocks } : {}),
+        },
+      }
     );
     return response.data;
   }

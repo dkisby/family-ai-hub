@@ -104,8 +104,8 @@ export class ValidationError extends Error {
 
 // ─── Exploration suggestion logic ─────────────────────────────────────────────
 
-const EXPLORE_GRID_STEP = 750; // blocks between candidate points
-const EXPLORE_MIN_DISTANCE = 500; // min distance from any known location
+const MIN_EXPLORE_DISTANCE = 100;
+const MAX_EXPLORE_DISTANCE = 1000;
 
 const COMPASS_DIRECTIONS = [
   { label: "north", dx: 0, dz: -1 },
@@ -124,7 +124,17 @@ function xzDist(x1: number, z1: number, x2: number, z2: number): number {
   return Math.sqrt(dx * dx + dz * dz);
 }
 
-function buildExploreSuggestions(locations: MinecraftLocation[]): ExploreSuggestion[] {
+function clampExploreDistance(distanceBlocks: number): number {
+  if (!Number.isFinite(distanceBlocks)) return 500;
+  return Math.max(MIN_EXPLORE_DISTANCE, Math.min(MAX_EXPLORE_DISTANCE, Math.round(distanceBlocks)));
+}
+
+function buildExploreSuggestions(
+  locations: MinecraftLocation[],
+  distanceBlocks: number
+): ExploreSuggestion[] {
+  const exploreDistance = clampExploreDistance(distanceBlocks);
+  const exploreStep = exploreDistance;
   const nonNoi = locations.filter((l) => l.category !== "noi");
   const noiBoundaries = locations.filter((l) => l.category === "noi");
 
@@ -133,8 +143,8 @@ function buildExploreSuggestions(locations: MinecraftLocation[]): ExploreSuggest
       {
         direction: "any direction",
         reason: "No locations saved yet. Start exploring and save your first shelter!",
-        suggestedX: 500,
-        suggestedZ: 500,
+        suggestedX: exploreDistance,
+        suggestedZ: exploreDistance,
       },
     ];
   }
@@ -167,18 +177,18 @@ function buildExploreSuggestions(locations: MinecraftLocation[]): ExploreSuggest
   for (const dir of COMPASS_DIRECTIONS) {
     if (suggestions.length >= 5) break;
 
-    const candidateX = centerX + dir.dx * EXPLORE_GRID_STEP;
-    const candidateZ = centerZ + dir.dz * EXPLORE_GRID_STEP;
+    const candidateX = centerX + dir.dx * exploreStep;
+    const candidateZ = centerZ + dir.dz * exploreStep;
 
     // Is there a NOI near the candidate?
     const nearNoi = noiBoundaries.some(
-      (n) => xzDist(candidateX, candidateZ, n.x, n.z) < EXPLORE_MIN_DISTANCE
+      (n) => xzDist(candidateX, candidateZ, n.x, n.z) < exploreDistance
     );
     if (nearNoi) continue;
 
     // Is there any saved location already near the candidate?
     const alreadyScouted = nonNoi.some(
-      (l) => xzDist(candidateX, candidateZ, l.x, l.z) < EXPLORE_MIN_DISTANCE
+      (l) => xzDist(candidateX, candidateZ, l.x, l.z) < exploreDistance
     );
     if (alreadyScouted) continue;
 
@@ -199,8 +209,8 @@ function buildExploreSuggestions(locations: MinecraftLocation[]): ExploreSuggest
   // Fallback: always offer at least one suggestion
   if (suggestions.length === 0) {
     const farthestDir = COMPASS_DIRECTIONS[0];
-    const fallbackX = centerX + farthestDir.dx * EXPLORE_GRID_STEP * 2;
-    const fallbackZ = centerZ + farthestDir.dz * EXPLORE_GRID_STEP * 2;
+    const fallbackX = centerX + farthestDir.dx * exploreStep * 2;
+    const fallbackZ = centerZ + farthestDir.dz * exploreStep * 2;
     suggestions.push({
       direction: "further out",
       reason:
@@ -312,13 +322,16 @@ export class MinecraftLocationsService {
 
   // ── Explore suggestions ──────────────────────────────────────────────────────
 
-  async getExploreSuggestions(worldId: string): Promise<ExploreSuggestion[]> {
+  async getExploreSuggestions(
+    worldId: string,
+    distanceBlocks = 500
+  ): Promise<ExploreSuggestion[]> {
     if (!worldId || typeof worldId !== "string" || worldId.trim() === "") {
       throw new ValidationError("world_id is required");
     }
 
     const locations = await this.listLocations(worldId);
-    return buildExploreSuggestions(locations);
+    return buildExploreSuggestions(locations, distanceBlocks);
   }
 
   // ── Delete ──────────────────────────────────────────────────────────────────

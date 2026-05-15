@@ -45,11 +45,11 @@ var acaEnvName = 'env-family-hub'
 var logAnalyticsName = 'log-family-hub'
 var postgresServerName = 'psql-family-hub'
 
-// Build DATABASE_URL only when postgres is deployed and a password is supplied.
-// The ternary avoids evaluating module outputs when deployPostgres=false.
-var databaseUrl = deployPostgres
-  ? 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServerName}.postgres.database.azure.com:5432/familyhub?sslmode=require'
-  : ''
+// Build DATABASE_URL whenever a password is supplied.
+// This lets backend-only redeploys keep DB connectivity without requiring deployPostgres=true.
+var databaseUrl = empty(postgresAdminPassword)
+  ? ''
+  : 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServerName}.postgres.database.azure.com:5432/familyhub?sslmode=require'
 
 module logAnalytics './modules/logAnalytics.bicep' = {
   name: 'logAnalytics'

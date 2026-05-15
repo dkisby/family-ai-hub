@@ -148,7 +148,12 @@ router.get("/api/tools/minecraft-locations/explore-suggestions", async (req: Aut
   if (!svc) return;
   try {
     const worldId = String(req.query.world_id ?? "");
-    const suggestions = await svc.getExploreSuggestions(worldId);
+    const distanceBlocks = Number(req.query.distance_blocks ?? 500);
+    if (Number.isNaN(distanceBlocks)) {
+      return res.status(400).json({ error: "distance_blocks must be a valid number" });
+    }
+
+    const suggestions = await svc.getExploreSuggestions(worldId, distanceBlocks);
     return res.json(suggestions);
   } catch (error) {
     return locationError(res, error);
