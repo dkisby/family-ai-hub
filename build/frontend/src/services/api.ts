@@ -43,6 +43,13 @@ export interface MinecraftAssistantResult {
   notes: string;
 }
 
+export interface CurrentUser {
+  oid: string;
+  email: string;
+  name?: string;
+  groups: string[];
+}
+
 class APIClient {
   private client: AxiosInstance;
 
@@ -121,6 +128,11 @@ class APIClient {
 
   async getHealth(): Promise<{ status: "ok" }> {
     const response = await this.client.get("/health");
+    return response.data;
+  }
+
+  async getCurrentUser(): Promise<CurrentUser> {
+    const response = await this.client.get<CurrentUser>("/api/me");
     return response.data;
   }
 

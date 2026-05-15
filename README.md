@@ -97,11 +97,14 @@ VITE_BACKEND_API_URL=http://localhost:3001
 ENTRA_TENANT_ID=<tenant-id>
 ENTRA_CLIENT_ID=<spa-app-id>
 ENTRA_API_CLIENT_ID=<api-app-id>
+ENTRA_ALLOWED_GROUP_IDS=<group-object-id-1>,<group-object-id-2>
 FRONTEND_ORIGIN=http://localhost:3000
 FOUNDRY_ENDPOINT=<foundry-url>
 FOUNDRY_API_KEY=<api-key>
 NODE_ENV=development
 ```
+
+`ENTRA_ALLOWED_GROUP_IDS` is optional. If you set it, only users in at least one of those Entra groups can use the API.
 
 #### 3. Run Locally
 
@@ -179,6 +182,7 @@ AZURE_SUBSCRIPTION_ID        # Azure subscription ID
 ENTRA_CLIENT_ID              # SPA app client ID
 ENTRA_API_CLIENT_ID          # API app client ID
 ENTRA_API_SCOPE              # api://<api-app-id>/access_as_user
+ENTRA_ALLOWED_GROUP_IDS      # Optional CSV of allowed Entra group object IDs
 BACKEND_API_URL              # Backend FQDN (https://your-backend.azurecontainerapps.io)
 FOUNDRY_ENDPOINT             # Foundry AI endpoint URL
 FOUNDRY_API_KEY              # Foundry API authentication key

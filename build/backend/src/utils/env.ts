@@ -16,6 +16,7 @@ export interface Environment {
   ENTRA_TENANT_ID: string;
   ENTRA_CLIENT_ID: string;
   ENTRA_API_CLIENT_ID: string;
+  ENTRA_ALLOWED_GROUP_IDS: string[];
   FRONTEND_ORIGIN: string;
   CORS_ALLOWED_ORIGINS: string[];
   NODE_ENV: "development" | "production";
@@ -27,6 +28,11 @@ export function loadEnv(): Environment {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  const allowedGroupIds = (process.env.ENTRA_ALLOWED_GROUP_IDS || "")
+    .split(",")
+    .map((groupId) => groupId.trim())
+    .filter(Boolean);
+
   const env: Environment = {
     PORT: parseInt(process.env.PORT || "3001"),
     FOUNDRY_ENDPOINT: process.env.FOUNDRY_ENDPOINT || "",
@@ -34,6 +40,7 @@ export function loadEnv(): Environment {
     ENTRA_TENANT_ID: process.env.ENTRA_TENANT_ID || "",
     ENTRA_CLIENT_ID: process.env.ENTRA_CLIENT_ID || "",
     ENTRA_API_CLIENT_ID: process.env.ENTRA_API_CLIENT_ID || process.env.ENTRA_CLIENT_ID || "",
+    ENTRA_ALLOWED_GROUP_IDS: allowedGroupIds,
     FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || "",
     CORS_ALLOWED_ORIGINS: corsAllowedOrigins,
     NODE_ENV: (process.env.NODE_ENV as "development" | "production") || "development",

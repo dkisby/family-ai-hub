@@ -202,6 +202,7 @@ jobs:
                            ENTRA_TENANT_ID="${{ secrets.AZURE_TENANT_ID }}" \
                            ENTRA_CLIENT_ID="${{ secrets.ENTRA_CLIENT_ID }}" \
                            ENTRA_API_CLIENT_ID="${{ secrets.ENTRA_API_CLIENT_ID }}" \
+                           ENTRA_ALLOWED_GROUP_IDS="${{ secrets.ENTRA_ALLOWED_GROUP_IDS }}" \
                            FRONTEND_ORIGIN="https://hub.kisbyfamily.com" \
                            NODE_ENV=production
 

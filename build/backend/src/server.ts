@@ -5,6 +5,7 @@ import { loadEnv } from "./utils/env.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { chatRouter } from "./routes/chat.js";
 import { healthRouter } from "./routes/health.js";
+import { meRouter } from "./routes/me.js";
 import { toolsRouter } from "./routes/tools.js";
 
 const env = loadEnv();
@@ -48,6 +49,7 @@ app.use("/api", (req, res, next) => {
   return authMiddleware(req, res, next);
 });
 app.use(chatRouter);
+app.use(meRouter);
 app.use(toolsRouter);
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error("Error:", err);

@@ -6,8 +6,10 @@ import {
   useAccount,
 } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
+import axios from "axios";
 import { ChatUI } from "./components/ChatUI";
 import { apiRequest, msalConfig, loginRequest } from "./auth/authConfig";
+import { apiClient } from "./services/api";
 
 const pca = new PublicClientApplication(msalConfig);
 
@@ -34,11 +36,19 @@ function AuthenticatedApp() {
           account: account ?? undefined,
         });
 
+        apiClient.setAuthToken(apiTokenResponse.accessToken);
+        await apiClient.getCurrentUser();
         setToken(apiTokenResponse.accessToken);
       } catch (error) {
         console.error("Token acquisition failed:", error);
         setToken(null);
-        setTokenError("Could not get API access token. Grant API access and try again.");
+        if (axios.isAxiosError(error) && error.response?.status === 403) {
+          setTokenError(
+            "Access denied. Your account is signed in, but it is not assigned to an allowed Entra group for this app."
+          );
+        } else {
+          setTokenError("Could not get API access token. Grant API access and try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -59,21 +69,39 @@ function AuthenticatedApp() {
   }
 
   if (tokenError || !token) {
+    const isAccessDenied =
+      tokenError?.toLowerCase().includes("access denied") || false;
+
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Session Error</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {isAccessDenied ? "Access Restricted" : "Session Error"}
+          </h1>
           <p className="text-gray-600 mb-6">{tokenError || "No token available"}</p>
-          <button
-            onClick={() =>
-              instance.acquireTokenRedirect(apiRequest).catch((error) => {
-                console.error("API consent error:", error);
-              })
-            }
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Grant API Access
-          </button>
+          {isAccessDenied ? (
+            <button
+              onClick={() =>
+                instance.logoutRedirect({
+                  postLogoutRedirectUri: window.location.origin,
+                })
+              }
+              className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors"
+            >
+              Sign Out
+            </button>
+          ) : (
+            <button
+              onClick={() =>
+                instance.acquireTokenRedirect(apiRequest).catch((error) => {
+                  console.error("API consent error:", error);
+                })
+              }
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Grant API Access
+            </button>
+          )}
         </div>
       </div>
     );
